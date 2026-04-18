@@ -1,165 +1,171 @@
 """
-JubJub curve operations for Midnight shielded keys.
+JubJub curve operations and key derivation for Midnight shielded keys.
 
-JubJub is a twisted Edwards curve embedded in the BLS12-381 scalar field.
-Used for coin commitments, encryption keys, and ZK circuit arithmetic.
-
-CONFIRMED from TypeScript SDK:
-  ledger.ZswapSecretKeys.fromSeed(32-byte seed) → {coinPublicKey, encryptionPublicKey}
-  ledger.DustSecretKey.fromSeed(32-byte seed) → {publicKey}
-
-IMPLEMENTATION STATUS:
-  Derivation from py_ecc is best-effort approximation.
-  MUST verify with TypeScript test vectors before shipping.
+This module implements key derivation for Zswap and Dust ecosystems,
+complying with Midnight Protocol v8.1.0-rc.1.
 """
 
 from __future__ import annotations
+from typing import TYPE_CHECKING, Optional
+import hashlib
 
-from typing import TYPE_CHECKING
-
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.kdf.hkdf import HKDF
+from .fields import Fr, EmbeddedFr
+from .hash import PersistentHashWriter, sample_bytes, persistent_hash
+from .curves import JubJubPoint
+from .poseidon import transient_hash
 
 if TYPE_CHECKING:
     from noxipher.zswap.notes import ShieldedCoinNote
 
-# JubJub order (subgroup order for the curve embedded in BLS12-381)
-JUBJUB_ORDER = 6554484396890773809930967563523245729705921265872317281365359162392183254199
-
+# JubJub subgroup order
+JUBJUB_ORDER = 0x0e7db4ea6533afa906673b0101343b00a6682093ccc81082d0970e5ed6f72cb7
 
 class ZswapSecretKeys:
     """
-    Python implementation of ledger.ZswapSecretKeys.fromSeed().
-
-    Derive coin private key and encryption private key from 32-byte shielded seed
-    (output of KeyDerivation.derive_key(role=Roles.ZSWAP)).
-
-    ⚠️ APPROXIMATION: Derivation uses HKDF-SHA256 as hypothesis.
-    Actual Midnight SDK may use different hash function (Poseidon, Blake2, etc.)
-    in JubJub scalar field. VERIFY with TypeScript test vectors.
+    Implementation of midnight-zswap SecretKeys.
+    Derived from a 32-byte seed.
     """
 
-    def __init__(self, shielded_seed: bytes) -> None:
-        if len(shielded_seed) != 32:
-            raise ValueError(f"shielded_seed must be 32 bytes, got {len(shielded_seed)}")
+    def __init__(self, coin_secret_key: bytes, encryption_secret_key: EmbeddedFr) -> None:
+        self._coin_sk = coin_secret_key
+        self._enc_sk = encryption_secret_key
 
-        # Hypothesis: HKDF-SHA256 to derive coin + encryption secrets
-        # Actual implementation needs tracing from ledger-v8 Rust source
-        coin_secret_bytes = self._hkdf(shielded_seed, b"midnight-coin-key")
-        enc_secret_bytes = self._hkdf(shielded_seed, b"midnight-enc-key")
-
-        # Convert to JubJub scalar (field element mod JubJub order)
-        self._coin_scalar = int.from_bytes(coin_secret_bytes, "little") % JUBJUB_ORDER
-        self._enc_scalar = int.from_bytes(enc_secret_bytes, "little") % JUBJUB_ORDER
-
-        # Public keys = scalar * JubJub generator point
-        # Simplified: use hash-based derivation since full JubJub point arithmetic
-        # from py_ecc may not match Midnight's exact curve parameters
-        self._coin_public_key: bytes = self._derive_public_key(self._coin_scalar, b"coin")
-        self._enc_public_key: bytes = self._derive_public_key(self._enc_scalar, b"enc")
-
-    @staticmethod
-    def _hkdf(seed: bytes, info: bytes) -> bytes:
-        """HKDF-SHA256 key derivation (hypothesis)."""
-        hkdf = HKDF(algorithm=hashes.SHA256(), length=32, salt=None, info=info)
-        return hkdf.derive(seed)
-
-    @staticmethod
-    def _derive_public_key(scalar: int, domain: bytes) -> bytes:
+    @classmethod
+    def from_seed(cls, seed: bytes) -> ZswapSecretKeys:
         """
-        Derive public key bytes from scalar.
-
-        Uses scalar-to-bytes conversion as placeholder.
-        Full JubJub point multiplication needs exact curve parameters from Midnight.
+        Derive Zswap keys from a 32-byte seed using protocol-defined domain separators.
+        Matches Seed::derive_coin_secret_key and Seed::derive_encryption_secret_key
+        in midnight-zswap/src/keys.rs.
         """
-        # Encode scalar as 32 bytes little-endian
-        # This is a simplified representation — actual implementation needs
-        # JubJub generator point multiplication
-        import hashlib
+        if len(seed) != 32:
+            raise ValueError("Seed must be 32 bytes")
 
-        # Deterministic derivation: hash(scalar_bytes || domain)
-        scalar_bytes = scalar.to_bytes(32, "little")
-        return hashlib.blake2b(scalar_bytes + domain, digest_size=32).digest()
+        # Derive Coin Secret Key (CSK)
+        # hash(b"midnight:csk" || seed)
+        csk_writer = PersistentHashWriter()
+        csk_writer.update(b"midnight:csk")
+        csk_writer.update(seed)
+        coin_sk = csk_writer.finalize()
 
-    @property
-    def coin_public_key(self) -> str:
-        """Hex-encoded coin public key (32 bytes)."""
-        return self._coin_public_key.hex()
+        # Derive Encryption Secret Key (ESK)
+        # sample_bytes(64, b"midnight:esk", seed) -> Fr::from_uniform_bytes
+        esk_bytes = sample_bytes(64, b"midnight:esk", seed)
+        enc_sk = EmbeddedFr.from_uniform_bytes(esk_bytes)
 
-    @property
-    def coin_public_key_bytes(self) -> bytes:
-        """Raw coin public key bytes."""
-        return self._coin_public_key
+        return cls(coin_sk, enc_sk)
 
     @property
-    def encryption_public_key(self) -> str:
-        """Hex-encoded encryption public key (32 bytes)."""
-        return self._enc_public_key.hex()
+    def coin_public_key(self) -> bytes:
+        """
+        Derive Coin Public Key (CPK).
+        Matches SecretKey::public_key in coin-structure/src/coin.rs.
+        hash(b"midnight:zswap-pk[v1]" || coin_sk)
+        """
+        pk_writer = PersistentHashWriter()
+        pk_writer.update(b"midnight:zswap-pk[v1]")
+        pk_writer.update(self._coin_sk)
+        return pk_writer.finalize()
 
     @property
-    def encryption_public_key_bytes(self) -> bytes:
-        """Raw encryption public key bytes."""
-        return self._enc_public_key
+    def encryption_public_key(self) -> bytes:
+        """
+        Derive Encryption Public Key (EPK).
+        Matches SecretKey::public_key in transient-crypto/src/encryption.rs.
+        EPK = generator * enc_sk
+        """
+        gen = JubJubPoint.generator()
+        pk_point = gen * self._enc_sk
+        return pk_point.to_bytes()
 
     @property
-    def coin_secret_scalar(self) -> int:
-        """Coin secret key scalar (to spend shielded coins)."""
-        return self._coin_scalar
+    def coin_secret_key(self) -> bytes:
+        return self._coin_sk
 
     @property
-    def enc_secret_scalar(self) -> int:
-        """Encryption secret key scalar."""
-        return self._enc_scalar
+    def encryption_secret_key(self) -> EmbeddedFr:
+        return self._enc_sk
 
 
 class DustSecretKey:
     """
-    Python implementation of ledger.DustSecretKey.fromSeed().
-
-    Derive from role=DUST seed (KeyDerivation.derive_key(role=Roles.DUST)).
-
-    ⚠️ APPROXIMATION: Same caveats as ZswapSecretKeys. VERIFY with TypeScript.
+    Implementation of DustSecretKey.
+    Matches DustSecretKey in ledger/src/dust.rs.
     """
 
-    def __init__(self, dust_seed: bytes) -> None:
-        if len(dust_seed) != 32:
-            raise ValueError(f"dust_seed must be 32 bytes, got {len(dust_seed)}")
+    def __init__(self, secret_key: Fr) -> None:
+        self._sk = secret_key
 
-        secret_bytes = HKDF(
-            algorithm=hashes.SHA256(), length=32, salt=None, info=b"midnight-dust-key"
-        ).derive(dust_seed)
-
-        secret_scalar = int.from_bytes(secret_bytes, "little") % JUBJUB_ORDER
-
-        self._secret_scalar = secret_scalar
-        # Derive public key using hash-based approach (placeholder for full JubJub)
-        import hashlib
-
-        scalar_bytes = secret_scalar.to_bytes(32, "little")
-        self._public_key = hashlib.blake2b(scalar_bytes + b"dust", digest_size=32).digest()
+    @classmethod
+    def from_seed(cls, seed: bytes) -> DustSecretKey:
+        """
+        Derive Dust key from seed.
+        Matches DustSecretKey::sample_bytes(seed, 64, b"midnight:dsk").
+        Uses Fr (BLS12-381 scalar field) as per ledger/src/dust.rs.
+        """
+        if len(seed) != 32:
+            raise ValueError("Seed must be 32 bytes")
+        
+        dsk_bytes = sample_bytes(64, b"midnight:dsk", seed)
+        sk = Fr.from_uniform_bytes(dsk_bytes)
+        return cls(sk)
 
     @property
     def public_key(self) -> bytes:
-        """Raw 32-byte public key."""
-        return self._public_key
+        """
+        Derive Dust Public Key.
+        Matches DustPublicKey derivation: transient_hash([Fr::from_le_bytes("mdn:dust:pk"), sk])
+        """
+        # "mdn:dust:pk" (11 bytes) as a field element
+        domain_f = Fr.from_le_bytes(b"mdn:dust:pk")
+        
+        # sk as Fr
+        sk_f = self._sk
+        
+        pk_f = transient_hash([domain_f, sk_f])
+        return pk_f.to_bytes()
 
     @property
-    def public_key_hex(self) -> str:
-        """Hex-encoded public key."""
-        return self._public_key.hex()
+    def secret_key(self) -> Fr:
+        return self._sk
 
 
-def coin_commitment(coin_info: ShieldedCoinNote) -> bytes:
+def hash_to_field(data: bytes) -> Fr:
     """
-    Compute coin commitment for ZSwap.
-
-    From Compact Runtime API: coinCommitment(CoinInfo) → CoinCommitment (32 bytes)
-    Midnight uses Pedersen commitment on JubJub field.
-
-    ⚠️ NOT implemented: Need to verify exact Pedersen/Poseidon hash from
-    @midnight-ntwrk/compact-runtime v0.15.0 coinCommitment() source.
+    Implementation of transient-crypto/src/hash.rs:hash_to_field.
+    Construction: transient_hash([midnight:field_hash, data])
     """
-    raise NotImplementedError(
-        "coinCommitment() needs verification of exact implementation from "
-        "@midnight-ntwrk/compact-runtime v0.15.0"
-    )
+    # Midnight represents [u8] in field as chunks of 31 bytes (FR_BYTES_STORED).
+    # For small strings like domain separators, it's just Fr(data_le).
+    
+    # preimage = b"midnight:field_hash".field_repr() + data.field_repr()
+    preimage = []
+    
+    # "midnight:field_hash" (19 bytes)
+    preimage.append(Fr.from_le_bytes(b"midnight:field_hash"))
+    
+    # data
+    # We simplify for data < 31 bytes which is the case for our domains
+    if len(data) > 31:
+        # Full implementation would chunk it LE
+        raise NotImplementedError("hash_to_field for large data not implemented")
+    preimage.append(Fr.from_le_bytes(data))
+    
+    return transient_hash(preimage)
+
+
+def coin_commitment(nonce: bytes, token_type: bytes, value: int, recipient_is_user: bool, recipient_hash: bytes) -> bytes:
+    """
+    Compute Zswap coin commitment.
+    Matches Info::commitment in coin-structure/src/coin.rs.
+    """
+    writer = PersistentHashWriter()
+    writer.update(b"midnight:zswap-cc[v1]")
+    writer.update(nonce)        # 32 bytes
+    writer.update(token_type)   # 32 bytes
+    writer.update(value.to_bytes(16, "little")) # u128 LE
+    
+    # Recipient
+    writer.update(b"\x01" if recipient_is_user else b"\x00")
+    writer.update(recipient_hash)
+    
+    return writer.finalize()

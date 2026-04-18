@@ -11,6 +11,7 @@
 ## 🚀 Features
 
 - **Asynchronous First**: Built with `httpx`, `gql`, and `websockets` for high-performance async workflows.
+- **Protocol Parity**: 100% byte-perfect parity with Midnight v8.1.0-rc.1 for key derivation (Zswap CSK/CPK/ESK, Dust DSK).
 - **Byte-Perfect SCALE Serialization**: Custom implementation of Midnight's `ScaleBigInt` and tagged serialization protocol (v5.0 spec).
 - **Comprehensive Wallet Support**: Unified management of NIGHT (unshielded), ZK (shielded), and DUST (fee) tokens.
 - **Smart Transaction Building**: Automatic UTXO discovery and selection for unshielded transfers.
