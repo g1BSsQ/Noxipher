@@ -61,3 +61,13 @@ def ripemd160(data: bytes) -> bytes:
     h = hashlib.new("ripemd160")
     h.update(data)
     return h.digest()
+
+def hmac_sha256(key: bytes, data: bytes) -> bytes:
+    """HMAC-SHA256."""
+    import hmac
+    return hmac.new(key, data, hashlib.sha256).digest()
+
+def hmac_sha512(key: bytes, data: bytes) -> bytes:
+    """HMAC-SHA512."""
+    import hmac
+    return hmac.new(key, data, hashlib.sha512).digest()
