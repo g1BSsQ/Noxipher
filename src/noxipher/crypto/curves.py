@@ -1,5 +1,5 @@
-from typing import Optional
-from .fields import Fr, EmbeddedFr
+from .fields import EmbeddedFr, Fr
+
 
 class JubJubPoint:
     """
@@ -11,7 +11,7 @@ class JubJubPoint:
     D = Fr(0x2a9318e74bfa2b48f5fd9207e6bd7fd4292d7f6d37579d2601065fd6d6343eb1)
     A = Fr(-1)
 
-    def __init__(self, u: Fr, v: Fr):
+    def __init__(self, u: Fr, v: Fr) -> None:
         self.u = u
         self.v = v
 

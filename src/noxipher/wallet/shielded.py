@@ -36,7 +36,7 @@ class ShieldedWallet:
     def __init__(self, shielded_seed: bytes, network: Network) -> None:
         self._seed = shielded_seed
         self._network = network
-        self._keys = ZswapSecretKeys(shielded_seed)
+        self._keys = ZswapSecretKeys.from_seed(shielded_seed)
         self._address = self._compute_address()
 
     def _compute_address(self) -> str:
@@ -48,8 +48,8 @@ class ShieldedWallet:
         """
         from noxipher.address.bech32m import encode_address
 
-        coin_pk = self._keys.coin_public_key_bytes  # 32 bytes
-        enc_pk = self._keys.encryption_public_key_bytes  # 32 bytes
+        coin_pk = self._keys.coin_public_key  # 32 bytes
+        enc_pk = self._keys.encryption_public_key  # 32 bytes
         address_bytes = coin_pk + enc_pk  # 64 bytes total
         return encode_address(address_bytes, "shielded", self._network)
 
@@ -70,7 +70,7 @@ class ShieldedWallet:
 
         Format: "aabb...cc" (128 hex chars, no separator)
         """
-        return self._keys.coin_public_key + self._keys.encryption_public_key
+        return (self._keys.coin_public_key + self._keys.encryption_public_key).hex()
 
     async def open_session(self, indexer: IndexerClient) -> str:
         """Open shielded session with Indexer to scan shielded transactions."""

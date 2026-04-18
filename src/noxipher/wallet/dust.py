@@ -41,7 +41,7 @@ class DustWallet:
     FEE_BLOCKS_MARGIN = 5
 
     def __init__(self, dust_seed: bytes, network: Network) -> None:
-        self._key = DustSecretKey(dust_seed)
+        self._key = DustSecretKey.from_seed(dust_seed)
         self._network = network
 
     @property
@@ -55,9 +55,8 @@ class DustWallet:
         from noxipher.address.bech32m import encode_address
 
         # SCALE encoding: 0x73 + little-endian pubkey
-        # We assume self._key.public_key is big-endian bytes (typical for TS representations)
-        pub_le = bytes(reversed(self._key.public_key))
-        scale_payload = b"\x73" + pub_le
+        # DustSecretKey.public_key returns little-endian bytes.
+        scale_payload = b"\x73" + self._key.public_key
         return encode_address(scale_payload, "dust", self._network)
 
     @property

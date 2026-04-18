@@ -6,16 +6,16 @@ complying with Midnight Protocol v8.1.0-rc.1.
 """
 
 from __future__ import annotations
-from typing import TYPE_CHECKING, Optional
-import hashlib
 
-from .fields import Fr, EmbeddedFr
-from .hash import PersistentHashWriter, sample_bytes, persistent_hash
+from typing import TYPE_CHECKING
+
 from .curves import JubJubPoint
+from .fields import EmbeddedFr, Fr
+from .hash import PersistentHashWriter, sample_bytes
 from .poseidon import transient_hash
 
 if TYPE_CHECKING:
-    from noxipher.zswap.notes import ShieldedCoinNote
+    pass
 
 # JubJub subgroup order
 JUBJUB_ORDER = 0x0e7db4ea6533afa906673b0101343b00a6682093ccc81082d0970e5ed6f72cb7
@@ -153,7 +153,13 @@ def hash_to_field(data: bytes) -> Fr:
     return transient_hash(preimage)
 
 
-def coin_commitment(nonce: bytes, token_type: bytes, value: int, recipient_is_user: bool, recipient_hash: bytes) -> bytes:
+def coin_commitment(
+    nonce: bytes,
+    token_type: bytes,
+    value: int,
+    recipient_is_user: bool,
+    recipient_hash: bytes,
+) -> bytes:
     """
     Compute Zswap coin commitment.
     Matches Info::commitment in coin-structure/src/coin.rs.

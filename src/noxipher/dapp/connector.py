@@ -34,11 +34,11 @@ class DAppConnector:
 
     def get_coin_public_key(self) -> str:
         """Return hex-encoded coin public key (32 bytes)."""
-        return self._wallet.shielded._keys.coin_public_key
+        return self._wallet.shielded._keys.coin_public_key.hex()
 
     def get_encryption_public_key(self) -> str:
         """Return hex-encoded encryption public key (32 bytes)."""
-        return self._wallet.shielded._keys.encryption_public_key
+        return self._wallet.shielded._keys.encryption_public_key.hex()
 
     async def balance_transaction(
         self, unbound_tx: dict[str, Any], ttl_seconds: int = DEFAULT_TTL_SECONDS

@@ -76,6 +76,7 @@ line-length = 99
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "ANN", "B"]
+per-file-ignores = { "src/noxipher/crypto/poseidon_constants.py" = ["E501"] }
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

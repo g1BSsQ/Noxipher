@@ -1,5 +1,5 @@
 import hashlib
-from typing import Union
+
 
 class PersistentHashWriter:
     """

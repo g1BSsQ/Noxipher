@@ -1,6 +1,6 @@
-from typing import List, Optional
 from .fields import Fr
-from .poseidon_constants import ROUND_CONSTANTS, MDS
+from .poseidon_constants import MDS, ROUND_CONSTANTS
+
 
 class Poseidon:
     """
@@ -12,7 +12,7 @@ class Poseidon:
     FULL_ROUNDS = 8
     PARTIAL_ROUNDS = 60
 
-    def __init__(self):
+    def __init__(self) -> None:
         # We use the raw CPU implementation (no skips) for maximum clarity and 1:1 parity
         pass
 
@@ -21,7 +21,7 @@ class Poseidon:
         """x^5 S-box."""
         return x ** 5
 
-    def linear_layer(self, state: List[Fr], round_index: int) -> List[Fr]:
+    def linear_layer(self, state: list[Fr], round_index: int) -> list[Fr]:
         """Matrix multiplication + addition of round constants."""
         new_state = [Fr(0)] * self.WIDTH
         
@@ -39,7 +39,7 @@ class Poseidon:
         
         return new_state
 
-    def permutation(self, state: List[Fr]) -> List[Fr]:
+    def permutation(self, state: list[Fr]) -> list[Fr]:
         """The core Poseidon permutation."""
         # 1. Add first round constants
         for i in range(self.WIDTH):
@@ -70,7 +70,7 @@ class Poseidon:
 
         return state
 
-    def hash(self, inputs: List[Fr]) -> Fr:
+    def hash(self, inputs: list[Fr]) -> Fr:
         """Sponge-based hashing of multiple field elements."""
         # Matches SpongeCPU::init
         register = [Fr(0), Fr(0), Fr(len(inputs))]
@@ -87,7 +87,7 @@ class Poseidon:
             
         return register[0]
 
-def transient_hash(elems: List[Fr]) -> Fr:
+def transient_hash(elems: list[Fr]) -> Fr:
     """Convenience function for Poseidon hashing."""
     p = Poseidon()
     return p.hash(elems)

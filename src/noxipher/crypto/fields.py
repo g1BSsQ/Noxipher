@@ -1,12 +1,13 @@
 import abc
-from typing import Type, TypeVar, Union
+from typing import TypeVar
 
 T = TypeVar("T", bound="FieldElement")
 
 class FieldElement(abc.ABC):
     MODULUS: int
+    value: int
 
-    def __init__(self, value: Union[int, bytes, "FieldElement"]):
+    def __init__(self, value: int | bytes | "FieldElement") -> None:
         if isinstance(value, FieldElement):
             self.value = value.value
         elif isinstance(value, bytes):
@@ -14,17 +15,23 @@ class FieldElement(abc.ABC):
         else:
             self.value = value % self.MODULUS
 
-    def __add__(self: T, other: Union[T, int]) -> T:
+    def __add__(self: T, other: T | int) -> T:
         other_val = other.value if isinstance(other, FieldElement) else other
         return self.__class__(self.value + other_val)
 
-    def __sub__(self: T, other: Union[T, int]) -> T:
+    def __sub__(self: T, other: T | int) -> T:
         other_val = other.value if isinstance(other, FieldElement) else other
         return self.__class__(self.value - other_val)
 
-    def __mul__(self: T, other: Union[T, int]) -> T:
+    def __mul__(self: T, other: T | int) -> T:
         other_val = other.value if isinstance(other, FieldElement) else other
         return self.__class__(self.value * other_val)
+
+    def __truediv__(self: T, other: T | int) -> T:
+        other_val = other.value if isinstance(other, FieldElement) else other
+        # Modular inverse using Fermat's Little Theorem (modulus is prime)
+        inv = pow(other_val, self.MODULUS - 2, self.MODULUS)
+        return self.__class__(self.value * inv)
 
     def __pow__(self: T, exponent: int) -> T:
         return self.__class__(pow(self.value, exponent, self.MODULUS))
@@ -36,7 +43,7 @@ class FieldElement(abc.ABC):
         if not isinstance(other, (FieldElement, int)):
             return False
         other_val = other.value if isinstance(other, FieldElement) else other
-        return (self.value % self.MODULUS) == (other_val % self.MODULUS)
+        return bool((self.value % self.MODULUS) == (other_val % self.MODULUS))
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({hex(self.value)})"
@@ -45,7 +52,12 @@ class FieldElement(abc.ABC):
         return self.value.to_bytes(length, "little")
 
     @classmethod
-    def from_uniform_bytes(cls: Type[T], data: bytes) -> T:
+    def from_le_bytes(cls: type[T], data: bytes) -> T:
+        """Create field element from little-endian bytes."""
+        return cls(data)
+
+    @classmethod
+    def from_uniform_bytes(cls: type[T], data: bytes) -> T:
         """Wide reduction for field elements (e.g. from 64 bytes)."""
         return cls(int.from_bytes(data, "little"))
 
