@@ -38,6 +38,9 @@ jobs:
       - name: Test (pytest)
         run: uv run pytest tests/ -v --cov=noxipher --cov-report=xml
 
+      - name: Verify build
+        run: uv build
+
       - name: Upload coverage
         uses: codecov/codecov-action@v4
         with:

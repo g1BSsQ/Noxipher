@@ -1,9 +1,10 @@
 # Noxipher 🌑
 
 [![CI](https://github.com/g1BSsQ/Noxipher/actions/workflows/ci.yml/badge.svg)](https://github.com/g1BSsQ/Noxipher/actions/workflows/ci.yml)
-
+[![PyPI version](https://img.shields.io/pypi/v/noxipher.svg)](https://pypi.org/project/noxipher/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![Code style: ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
 **Noxipher** is a professional-grade Python SDK for the **Midnight Network**, a privacy-focused blockchain. It provides a robust, asynchronous interface for interacting with Midnight nodes, indexers, and proof servers.
 
