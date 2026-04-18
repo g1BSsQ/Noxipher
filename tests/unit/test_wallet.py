@@ -1,4 +1,5 @@
 """Unit tests for wallet module."""
+
 import pytest
 
 from noxipher.core.config import Network

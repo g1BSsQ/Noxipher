@@ -9,6 +9,7 @@ Proof Server API:
   POST /prove                 → ZK proof bytes
   GET  /keys/{circuit_id}    → Proving key download
 """
+
 from __future__ import annotations
 
 import httpx
@@ -31,11 +32,11 @@ class ProofServerClient:
         self._timeout = timeout
         self._client: httpx.AsyncClient | None = None
 
-    async def __aenter__(self) -> "ProofServerClient":
+    async def __aenter__(self) -> ProofServerClient:
         self._client = httpx.AsyncClient(timeout=self._timeout)
         return self
 
-    async def __aexit__(self, *args) -> None:
+    async def __aexit__(self, *args: object) -> None:
         if self._client:
             await self._client.aclose()
 

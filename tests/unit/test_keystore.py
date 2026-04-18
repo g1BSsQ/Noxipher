@@ -1,4 +1,5 @@
 """Unit tests for keystore encryption/decryption."""
+
 import pytest
 
 from noxipher.wallet.keystore import Keystore
@@ -20,7 +21,9 @@ class TestKeystore:
         """Wrong password raises on decrypt."""
         data = b"secret"
         keystore = Keystore.encrypt(data, "correct_password")
-        with pytest.raises(Exception):
+        from cryptography.exceptions import InvalidTag
+
+        with pytest.raises(InvalidTag):
             Keystore.decrypt(keystore, "wrong_password")
 
     def test_keystore_has_version(self) -> None:

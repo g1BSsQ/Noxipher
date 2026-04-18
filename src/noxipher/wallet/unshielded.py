@@ -1,12 +1,12 @@
 """
 UnshieldedWallet — NIGHT token wallet with sr25519 signing.
 """
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
 from noxipher.core.config import Network
-from noxipher.core.exceptions import WalletError
 from noxipher.crypto.keys import Sr25519Signer
 
 if TYPE_CHECKING:
@@ -45,17 +45,17 @@ class UnshieldedWallet:
         """Sign with 'pre-proof' marker — for unproven transactions."""
         return self._signer.sign(data)
 
-    def as_substrate_keypair(self):
+    def as_substrate_keypair(self) -> object:
         """Get substrate-interface Keypair."""
         return self._signer.as_substrate_keypair()
 
-    async def get_utxos(self, indexer: "IndexerClient") -> list[dict]:
+    async def get_utxos(self, indexer: IndexerClient) -> list[dict]:
         """
         Get UTxO set from Indexer using optimized query.
         """
         return await indexer.get_utxos(address=self._address)
 
-    async def get_balance(self, indexer: "IndexerClient") -> dict[str, int]:
+    async def get_balance(self, indexer: IndexerClient) -> dict[str, int]:
         """
         Returns {token_type_hex: amount_specks}.
         NIGHT native token type = "0000...00" (32 zero bytes).
@@ -67,7 +67,7 @@ class UnshieldedWallet:
             # Handle potential nested structure from GraphQL
             if isinstance(tt, dict):
                 tt = tt.get("hex", "00" * 32)
-            
+
             val = int(utxo.get("value", 0))
             balances[tt] = balances.get(tt, 0) + val
         return balances
@@ -78,4 +78,3 @@ class UnshieldedWallet:
         The data should already include the 'midnight:hash-intent:' prefix.
         """
         return self.sign(data_to_sign)
-

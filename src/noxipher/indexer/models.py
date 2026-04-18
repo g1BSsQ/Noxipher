@@ -1,9 +1,8 @@
 """
 Indexer data models — Pydantic models for Midnight Indexer v4 responses.
 """
-from __future__ import annotations
 
-from typing import Literal
+from __future__ import annotations
 
 from pydantic import BaseModel, field_validator
 

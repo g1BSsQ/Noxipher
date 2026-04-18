@@ -12,21 +12,19 @@ IMPLEMENTATION STATUS:
   Derivation from py_ecc is best-effort approximation.
   MUST verify with TypeScript test vectors before shipping.
 """
+
 from __future__ import annotations
+
+from typing import TYPE_CHECKING
 
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 
-# py_ecc JubJub — pure Python, BLS12-381 embedded curve
-try:
-    from py_ecc.fields.field_elements import FQ as JubJubFr  # type: ignore[import]
+if TYPE_CHECKING:
+    from noxipher.zswap.notes import ShieldedCoinNote
 
-    JUBJUB_AVAILABLE = True
-    # JubJub order (subgroup order for the curve embedded in BLS12-381)
-    JUBJUB_ORDER = 6554484396890773809930967563523245729705921265872317281365359162392183254199
-except ImportError:
-    JUBJUB_AVAILABLE = False
-    JUBJUB_ORDER = 0
+# JubJub order (subgroup order for the curve embedded in BLS12-381)
+JUBJUB_ORDER = 6554484396890773809930967563523245729705921265872317281365359162392183254199
 
 
 class ZswapSecretKeys:
@@ -151,7 +149,7 @@ class DustSecretKey:
         return self._public_key.hex()
 
 
-def coin_commitment(coin_info: "ShieldedCoinInfo") -> bytes:
+def coin_commitment(coin_info: ShieldedCoinNote) -> bytes:
     """
     Compute coin commitment for ZSwap.
 

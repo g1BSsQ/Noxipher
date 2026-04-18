@@ -1,6 +1,7 @@
 """
 Blake2b-256 and HMAC hashing utilities for Midnight.
 """
+
 import hashlib
 import hmac as _hmac
 

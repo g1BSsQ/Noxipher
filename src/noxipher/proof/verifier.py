@@ -14,6 +14,4 @@ class ProofVerifier:
 
         ⚠️ PLACEHOLDER: Needs ZK circuit verifier implementation.
         """
-        raise NotImplementedError(
-            "ProofVerifier needs ZK circuit verifier implementation"
-        )
+        raise NotImplementedError("ProofVerifier needs ZK circuit verifier implementation")

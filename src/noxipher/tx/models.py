@@ -10,6 +10,7 @@ Tagged serialization tags (from Tagged impls in structure.rs):
   Transaction        → "midnight:Transaction:"
   StandardTransaction → "midnight:StandardTransaction:"
 """
+
 from __future__ import annotations
 
 from pydantic import BaseModel
@@ -28,7 +29,7 @@ class TransactionReceipt(BaseModel):
 class UnshieldedInput(BaseModel):
     """Unshielded NIGHT UTxO input."""
 
-    tx_hash: str   # Transaction hash of the UTxO being spent
+    tx_hash: str  # Transaction hash of the UTxO being spent
     output_index: int  # Output index within the transaction
 
 
@@ -36,8 +37,10 @@ class UnshieldedOutput(BaseModel):
     """Unshielded NIGHT UTxO output."""
 
     recipient: str  # Midnight address (mn_addr_...)
-    value: int      # Amount in Specks (1 NIGHT = 10^12 Specks)
-    token_type: str = "0000000000000000000000000000000000000000000000000000000000000000"  # NIGHT = 32 zero bytes
+    value: int  # Amount in Specks (1 NIGHT = 10^12 Specks)
+    token_type: str = (
+        "0000000000000000000000000000000000000000000000000000000000000000"  # NIGHT = 32 zero bytes
+    )
 
 
 class ZswapCoinNote(BaseModel):
@@ -59,10 +62,10 @@ class ZswapOffer(BaseModel):
       - transients: temporary coins (contract-internal)
     """
 
-    inputs: list[str] = []       # hex-encoded nullifiers
+    inputs: list[str] = []  # hex-encoded nullifiers
     outputs: list[ZswapCoinNote] = []
-    transients: list[str] = []   # hex-encoded transient commitments
-    root: str = ""               # Merkle tree root (hex)
+    transients: list[str] = []  # hex-encoded transient commitments
+    root: str = ""  # Merkle tree root (hex)
 
 
 class Intent(BaseModel):
@@ -72,8 +75,8 @@ class Intent(BaseModel):
     Mirrors ledger/src/structure.rs Intent struct.
     """
 
-    contract_address: str   # hex-encoded contract address
-    entry_point: str        # Entry point name (e.g., "increment")
+    contract_address: str  # hex-encoded contract address
+    entry_point: str  # Entry point name (e.g., "increment")
     guaranteed_offer: ZswapOffer = ZswapOffer()
     fallible_offer: ZswapOffer = ZswapOffer()
 
@@ -113,8 +116,8 @@ class UnsignedTransaction(BaseModel):
     signing_payload_hex: str = ""  # Populated after balancing
 
     # For internal use
-    circuits: list[dict] = []    # ZK circuits needing proof
-    guaranteed_hex: str = ""     # Pre-serialized guaranteed segment
+    circuits: list[dict] = []  # ZK circuits needing proof
+    guaranteed_hex: str = ""  # Pre-serialized guaranteed segment
     fallible_hexes: list[str] = []
 
 
@@ -135,4 +138,4 @@ class ProvenTransaction(BaseModel):
     proof_hexes: list[str] = []
     requires_unshielded_signature: bool = False
     signing_payload_hex: str = ""
-    signature_hex: str = ""   # Sr25519 signature hex
+    signature_hex: str = ""  # Sr25519 signature hex

@@ -1,6 +1,9 @@
 """Unit tests for crypto key derivation."""
+
 import pytest
 
+from noxipher.core.config import Network
+from noxipher.core.exceptions import InvalidMnemonicError
 from noxipher.crypto.keys import (
     MIDNIGHT_COIN_TYPE,
     KeyDerivation,
@@ -8,9 +11,6 @@ from noxipher.crypto.keys import (
     SpendingKey,
     Sr25519Signer,
 )
-from noxipher.core.config import Network
-from noxipher.core.exceptions import InvalidMnemonicError
-
 
 TEST_MNEMONIC = "abandon " * 23 + "art"
 

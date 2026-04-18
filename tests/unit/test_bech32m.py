@@ -1,4 +1,5 @@
 """Unit tests for Bech32m address encoding/decoding."""
+
 import pytest
 
 from noxipher.address.bech32m import (

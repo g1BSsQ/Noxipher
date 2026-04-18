@@ -5,9 +5,10 @@ DustWallet — DUST fee token wallet (non-transferable).
 DUST CANNOT be sent to other users — only used to pay fees.
 DUST is generated automatically from NIGHT UTxOs (after registering on-chain).
 """
+
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Never
 
 from noxipher.core.config import Network
 from noxipher.core.exceptions import WalletError
@@ -48,7 +49,7 @@ class DustWallet:
         """
         DUST address = Bech32m with HRP mn_dust_<network>.
         Payload is SCALE compact encoding of the 32-byte BigInt public key.
-        Specifically, BigInt > 2^30 uses 32 bytes, encoded with prefix 0x73, 
+        Specifically, BigInt > 2^30 uses 32 bytes, encoded with prefix 0x73,
         followed by 32 bytes in little-endian order.
         """
         from noxipher.address.bech32m import encode_address
@@ -56,7 +57,7 @@ class DustWallet:
         # SCALE encoding: 0x73 + little-endian pubkey
         # We assume self._key.public_key is big-endian bytes (typical for TS representations)
         pub_le = bytes(reversed(self._key.public_key))
-        scale_payload = b'\x73' + pub_le
+        scale_payload = b"\x73" + pub_le
         return encode_address(scale_payload, "dust", self._network)
 
     @property
@@ -68,7 +69,7 @@ class DustWallet:
         """DUST cannot be transferred. Always returns False."""
         return False
 
-    def transfer(self, *args, **kwargs):
+    def transfer(self, *args: object, **kwargs: object) -> Never:
         """DUST is non-transferable. Raises WalletError."""
         raise WalletError(
             "DUST cannot be transferred between wallets. "
@@ -77,8 +78,8 @@ class DustWallet:
         )
 
     async def get_generation_status(
-        self, indexer: "IndexerClient", cardano_stake_key: str
-    ) -> "DustGenerationStatus":
+        self, indexer: IndexerClient, cardano_stake_key: str
+    ) -> DustGenerationStatus:
         """Query DUST generation status for Cardano stake key."""
         results = await indexer.get_dust_status([cardano_stake_key])
         if not results:
@@ -88,8 +89,8 @@ class DustWallet:
     async def register_night_utxos(
         self,
         utxos: list[dict],
-        tx_builder: "TransactionBuilder",
-        unshielded_wallet: "UnshieldedWallet",
+        tx_builder: TransactionBuilder,
+        unshielded_wallet: UnshieldedWallet,
     ) -> str:
         """
         Register NIGHT UTxOs for DUST generation.

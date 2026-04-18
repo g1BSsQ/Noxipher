@@ -7,6 +7,7 @@ CONFIRMED from Counter CLI source (Apr 2026):
   3. dustSecretKey = ledger.DustSecretKey.fromSeed(keys[Roles.Dust])
   4. unshieldedKeystore = createKeystore(keys[Roles.NightExternal], networkId)
 """
+
 from __future__ import annotations
 
 from noxipher.core.config import Network
@@ -66,12 +67,12 @@ class MidnightWallet:
         return self._network
 
     @classmethod
-    def from_mnemonic(cls, mnemonic: str, network: Network) -> "MidnightWallet":
+    def from_mnemonic(cls, mnemonic: str, network: Network) -> MidnightWallet:
         """Create wallet from BIP39 mnemonic (24 words)."""
         return cls(mnemonic=mnemonic, network=network)
 
     @classmethod
-    def generate(cls, network: Network) -> tuple["MidnightWallet", str]:
+    def generate(cls, network: Network) -> tuple[MidnightWallet, str]:
         """
         Generate new random wallet.
 

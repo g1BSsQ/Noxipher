@@ -1,6 +1,7 @@
 """
 ShieldedWallet — Privacy-preserving shielded wallet using JubJub keys.
 """
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -20,9 +21,16 @@ class ShieldedWallet:
     Shielded address = Bech32m(ShieldedAddress(coinPublicKey, encryptionPublicKey))
 
     CONFIRMED from Counter CLI (Apr 2026):
-      coinPubKey = ShieldedCoinPublicKey.fromHexString(state.shielded.coinPublicKey)
-      encPubKey  = ShieldedEncryptionPublicKey.fromHexString(state.shielded.encryptionPublicKey)
-      shieldedAddress = MidnightBech32m.encode(networkId, new ShieldedAddress(coinPubKey, encPubKey))
+      coinPubKey = ShieldedCoinPublicKey.fromHexString(
+          state.shielded.coinPublicKey
+      )
+      encPubKey  = ShieldedEncryptionPublicKey.fromHexString(
+          state.shielded.encryptionPublicKey
+      )
+      shieldedAddress = MidnightBech32m.encode(
+          networkId, new ShieldedAddress(coinPubKey, encPubKey)
+      )
+
     """
 
     def __init__(self, shielded_seed: bytes, network: Network) -> None:
@@ -64,17 +72,15 @@ class ShieldedWallet:
         """
         return self._keys.coin_public_key + self._keys.encryption_public_key
 
-    async def open_session(self, indexer: "IndexerClient") -> str:
+    async def open_session(self, indexer: IndexerClient) -> str:
         """Open shielded session with Indexer to scan shielded transactions."""
         return await indexer.connect_wallet_session(self.viewing_key)
 
-    async def close_session(self, indexer: "IndexerClient", session_id: str) -> None:
+    async def close_session(self, indexer: IndexerClient, session_id: str) -> None:
         """Close shielded session."""
         await indexer.disconnect_wallet_session(session_id)
 
-    async def sync_coins(
-        self, indexer: "IndexerClient", session_id: str
-    ) -> list[dict]:
+    async def sync_coins(self, indexer: IndexerClient, session_id: str) -> list[dict]:
         """Stream shielded transactions, collect unspent coins."""
         coins = []
         async for event in indexer.subscribe_shielded_transactions(session_id):

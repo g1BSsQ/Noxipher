@@ -1,4 +1,5 @@
 """Address models."""
+
 from pydantic import BaseModel
 
 from noxipher.core.config import Network

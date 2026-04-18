@@ -1,6 +1,7 @@
 """Unit tests for token models."""
-from noxipher.token.night import NIGHTToken, specks_to_night, night_to_specks
+
 from noxipher.token.dust import DUSTToken
+from noxipher.token.night import NIGHTToken, night_to_specks, specks_to_night
 from noxipher.token.shielded import ShieldedToken
 
 

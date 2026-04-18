@@ -1,4 +1,5 @@
 """Unit tests for address validator."""
+
 from noxipher.address.bech32m import encode_address
 from noxipher.address.validator import (
     get_address_type,

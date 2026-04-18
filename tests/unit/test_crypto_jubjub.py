@@ -1,7 +1,8 @@
 """Unit tests for JubJub key derivation."""
+
 import pytest
 
-from noxipher.crypto.jubjub import ZswapSecretKeys, DustSecretKey
+from noxipher.crypto.jubjub import DustSecretKey, ZswapSecretKeys
 
 
 class TestZswapSecretKeys:

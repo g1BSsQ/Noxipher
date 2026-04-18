@@ -6,6 +6,7 @@ RawTokenType = bytes(32) (all zeros — confirmed from ledger-v8)
 Total supply: 24,000,000,000 NIGHT
 Unit: Specks (smallest unit)
 """
+
 from __future__ import annotations
 
 # NIGHT native token type (32 zero bytes)

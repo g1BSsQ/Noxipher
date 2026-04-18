@@ -6,6 +6,7 @@ Compact language:
   - Compiled by `compact compile` → ZK circuits + ABI JSON
   - compactc examples/counter/counter.compact --output-dir /tmp/out
 """
+
 from __future__ import annotations
 
 import json
@@ -38,7 +39,7 @@ class ContractABI(BaseModel):
     entry_points: list[ContractEntryPoint] = []
 
     @classmethod
-    def from_json_file(cls, path: Path) -> "ContractABI":
+    def from_json_file(cls, path: Path) -> ContractABI:
         """Load ABI from compactc output JSON file."""
         try:
             raw = json.loads(path.read_text())
@@ -76,7 +77,7 @@ class CompactContract:
         self._circuit_dir = circuit_dir
 
     @classmethod
-    def from_directory(cls, circuit_dir: Path) -> "CompactContract":
+    def from_directory(cls, circuit_dir: Path) -> CompactContract:
         """
         Load contract from compactc output directory.
 

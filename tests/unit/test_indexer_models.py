@@ -1,5 +1,6 @@
 """Unit tests for Indexer models."""
-from noxipher.indexer.models import Block, Transaction, TransactionResult, DustGenerationStatus
+
+from noxipher.indexer.models import Block, DustGenerationStatus, Transaction, TransactionResult
 
 
 class TestIndexerModels:

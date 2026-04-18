@@ -31,6 +31,7 @@ VERIFY STEP (required before shipping):
 
   Compare with Python output of KeyDerivation.derive_keys()
 """
+
 import hashlib
 import hmac as _hmac
 import struct
@@ -38,7 +39,7 @@ import struct
 from mnemonic import Mnemonic
 
 from noxipher.core.config import Network
-from noxipher.core.exceptions import InvalidMnemonicError, KeyDerivationError
+from noxipher.core.exceptions import InvalidMnemonicError
 
 # Optional Rust-based sr25519 bindings
 try:
@@ -122,9 +123,7 @@ class KeyDerivation:
         return i_bytes[:32], i_bytes[32:]  # (master_key, master_chain_code)
 
     @classmethod
-    def _ckd_hardened(
-        cls, parent_key: bytes, parent_cc: bytes, index: int
-    ) -> tuple[bytes, bytes]:
+    def _ckd_hardened(cls, parent_key: bytes, parent_cc: bytes, index: int) -> tuple[bytes, bytes]:
         """BIP-32 hardened child key derivation."""
         # data = 0x00 || parent_key || index (big-endian uint32)
         data = b"\x00" + parent_key + struct.pack(">I", index | HARDENED)
@@ -132,9 +131,7 @@ class KeyDerivation:
         return i_bytes[:32], i_bytes[32:]
 
     @classmethod
-    def _ckd_normal(
-        cls, parent_key: bytes, parent_cc: bytes, index: int
-    ) -> tuple[bytes, bytes]:
+    def _ckd_normal(cls, parent_key: bytes, parent_cc: bytes, index: int) -> tuple[bytes, bytes]:
         """BIP-32 normal (non-hardened) child key derivation."""
         # Compute public key from parent_key
         if SR25519_AVAILABLE:
@@ -252,12 +249,11 @@ class Sr25519Signer:
             expected = _hmac.new(self._private_key, data, hashlib.sha512).digest()
             return expected == signature
 
-    def as_substrate_keypair(self):
+    def as_substrate_keypair(self) -> object:
         """Convert to substrate-interface Keypair. Requires substrate-interface."""
         if not SUBSTRATE_AVAILABLE:
             raise ImportError(
-                "substrate-interface not installed. "
-                "Install with: pip install noxipher[node]"
+                "substrate-interface not installed. Install with: pip install noxipher[node]"
             )
         return Keypair(
             public_key=self._public_key,
@@ -277,13 +273,13 @@ class Sr25519Signer:
         HYPOTHESIS: addressFromKey = Blake2b-256(public_key)
         VERIFY with TypeScript: ledger.addressFromKey(ledger.signatureVerifyingKey(privHex))
         """
-        from noxipher.address.bech32m import encode_address
-        from noxipher.crypto.hash import blake2_256
-
         # signatureVerifyingKey = sr25519 public key (32 bytes)
         # addressFromKey = SHA-256(public_key) → 32 bytes
         # Verified from ledger-v7 vectors
         import hashlib
+
+        from noxipher.address.bech32m import encode_address
+
         address_bytes = hashlib.sha256(self.public_key).digest()  # 32 bytes
         return encode_address(address_bytes, "unshielded", network)
 

@@ -1,6 +1,7 @@
 """
 pytest conftest — shared fixtures for all tests.
 """
+
 import pytest
 
 from noxipher.testing.testkit import TEST_MNEMONIC

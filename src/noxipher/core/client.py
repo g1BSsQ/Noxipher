@@ -1,29 +1,34 @@
-import asyncio
-from typing import Optional, Any, Dict, TYPE_CHECKING
-from .config import Network, NetworkConfig, NETWORK_CONFIGS
+from typing import TYPE_CHECKING
+
+from .config import NETWORK_CONFIGS, Network, NetworkConfig
 from .health import HealthStatus, ServiceHealth
 from .logger import get_logger
 
 if TYPE_CHECKING:
+    from noxipher.tx.builder import TransactionReceipt
     from noxipher.wallet.wallet import MidnightWallet
 
 
-from noxipher.node.client import NodeClient
 from noxipher.indexer.client import IndexerClient
+from noxipher.node.client import NodeClient
 from noxipher.proof.client import ProofServerClient
 from noxipher.tx.builder import TransactionBuilder
 
 logger = get_logger(__name__)
+
 
 class NoxipherClient:
     """
     Main entry point for the Noxipher SDK.
     Coordinates the Indexer, Node, and Proof Server clients.
     """
-    def __init__(self, network: Network = Network.PREPROD, custom_config: Optional[NetworkConfig] = None):
+
+    def __init__(
+        self, network: Network = Network.PREPROD, custom_config: NetworkConfig | None = None
+    ) -> None:
         self.config = custom_config or NETWORK_CONFIGS[network]
         logger.info("Initializing NoxipherClient", network=self.config.name)
-        
+
         self.node = NodeClient(self.config)
         self.indexer = IndexerClient(self.config)
         self.proof = ProofServerClient(self.config)
@@ -33,7 +38,7 @@ class NoxipherClient:
         await self.connect()
         return self
 
-    async def __aexit__(self, *args: Any) -> None:
+    async def __aexit__(self, *args: object) -> None:
         await self.disconnect()
 
     async def connect(self) -> None:
@@ -55,7 +60,7 @@ class NoxipherClient:
         """Checks the health of all network components."""
         node_health = await self.node.get_health()
         proof_health = await self.proof.health()
-        
+
         # Simple heuristic for indexer health
         try:
             # Try to get genesis block or something light
@@ -65,28 +70,23 @@ class NoxipherClient:
             indexer_ok = False
 
         status = HealthStatus.OK if (node_health and indexer_ok) else HealthStatus.ERROR
-        
+
         return ServiceHealth(
             status=status,
             node_connected=node_health is not None,
             indexer_connected=indexer_ok,
             proof_server_connected="version" in proof_health,
-            details={
-                "node": node_health,
-                "proof_server": proof_health
-            }
+            details={"node": node_health, "proof_server": proof_health},
         )
+
     async def get_balance(self, wallet: "MidnightWallet") -> dict[str, int]:
         """Gets the unshielded balance of the given wallet."""
         return await wallet.unshielded.get_balance(self.indexer)
 
     async def send_unshielded_transaction(
         self, wallet: "MidnightWallet", recipient_address: str, amount: int
-    ) -> Any:
+    ) -> "TransactionReceipt":
         """Sends an unshielded NIGHT transfer transaction."""
         return await self.tx.transfer(
-            wallet=wallet,
-            to=recipient_address,
-            amount=amount,
-            shielded=False
+            wallet=wallet, to=recipient_address, amount=amount, shielded=False
         )

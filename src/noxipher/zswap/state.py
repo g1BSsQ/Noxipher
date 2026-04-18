@@ -4,6 +4,7 @@ ZSwap state management — global shielded state.
 Midnight maintains a Merkle tree of all coin commitments.
 Spending = prove membership in Merkle tree + reveal nullifier.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -43,9 +44,7 @@ class ZswapState:
         balances: dict[bytes, int] = {}
         for coin in self.unspent_coins:
             if token_type is None or coin.token_type == token_type:
-                balances[coin.token_type] = (
-                    balances.get(coin.token_type, 0) + coin.value
-                )
+                balances[coin.token_type] = balances.get(coin.token_type, 0) + coin.value
         return balances
 
 

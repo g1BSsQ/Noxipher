@@ -1,12 +1,20 @@
-from .config import Network, NetworkConfig, NETWORK_CONFIGS
-from .exceptions import (
-    NoxipherError, ConfigurationError, CryptographyError,
-    NetworkError, NodeError, IndexerError, ProofServerError,
-    TransactionError, ContractError, WalletError, AddressError
-)
 from .client import NoxipherClient
-from .logger import configure_logging, get_logger
+from .config import NETWORK_CONFIGS, Network, NetworkConfig
+from .exceptions import (
+    AddressError,
+    ConfigurationError,
+    ContractError,
+    CryptographyError,
+    IndexerError,
+    NetworkError,
+    NodeError,
+    NoxipherError,
+    ProofServerError,
+    TransactionError,
+    WalletError,
+)
 from .health import HealthStatus, ServiceHealth
+from .logger import configure_logging, get_logger
 
 __all__ = [
     "Network",
@@ -27,5 +35,5 @@ __all__ = [
     "configure_logging",
     "get_logger",
     "HealthStatus",
-    "ServiceHealth"
+    "ServiceHealth",
 ]

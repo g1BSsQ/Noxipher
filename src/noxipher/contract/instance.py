@@ -1,6 +1,7 @@
 """
 ContractInstance — deployed contract interaction.
 """
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -23,7 +24,7 @@ class ContractInstance:
         self,
         address: str,
         contract: CompactContract,
-        client: "NoxipherClient",
+        client: NoxipherClient,
     ) -> None:
         self._address = address
         self._contract = contract
@@ -38,7 +39,7 @@ class ContractInstance:
         self,
         entry_point: str,
         args: dict | None = None,
-        wallet: "MidnightWallet | None" = None,
+        wallet: MidnightWallet | None = None,
     ) -> dict:
         """
         Call contract entry point.
@@ -55,23 +56,17 @@ class ContractInstance:
 
         if ep.is_impure:
             if wallet is None:
-                raise ContractError(
-                    f"Impure entry point '{entry_point}' requires wallet"
-                )
+                raise ContractError(f"Impure entry point '{entry_point}' requires wallet")
             return await self._call_impure(entry_point, args or {}, wallet)
         else:
             return await self._call_pure(entry_point, args or {})
 
     async def _call_pure(self, entry_point: str, args: dict) -> dict:
         """Query contract state (no transaction)."""
-        state = await self._client.indexer.get_transactions(
-            address=self._address, limit=1
-        )
+        state = await self._client.indexer.get_transactions(address=self._address, limit=1)
         return {"result": state, "tx_hash": None}
 
-    async def _call_impure(
-        self, entry_point: str, args: dict, wallet: "MidnightWallet"
-    ) -> dict:
+    async def _call_impure(self, entry_point: str, args: dict, wallet: MidnightWallet) -> dict:
         """Call impure entry point → transaction."""
         tx_receipt = await self._client.tx.call_contract(
             wallet=wallet,

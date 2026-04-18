@@ -1,4 +1,5 @@
 """Contract-related models."""
+
 from pydantic import BaseModel
 
 

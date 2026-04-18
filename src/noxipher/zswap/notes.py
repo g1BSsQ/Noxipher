@@ -6,6 +6,7 @@ Midnight ZSwap (based on Zerocash):
   - Spend = reveal NULLIFIER (prevents double-spend, doesn't reveal coin)
   - Coins encrypted to recipient's encryption public key
 """
+
 from __future__ import annotations
 
 from pydantic import BaseModel

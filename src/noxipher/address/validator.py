@@ -1,5 +1,6 @@
 """Address validation utilities."""
-from noxipher.address.bech32m import decode_address, validate_address as _validate
+
+from noxipher.address.bech32m import decode_address
 from noxipher.core.config import Network
 from noxipher.core.exceptions import AddressError
 

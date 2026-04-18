@@ -1,4 +1,5 @@
 """Wallet balance models."""
+
 from pydantic import BaseModel
 
 

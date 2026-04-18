@@ -5,9 +5,11 @@ Indexer v4 endpoints (confirmed Apr 2026):
   HTTP:  https://indexer.<network>.midnight.network/api/v4/graphql
   WS:    wss://indexer.<network>.midnight.network/api/v4/graphql/ws
 """
+
 from __future__ import annotations
 
-from typing import Any, AsyncIterator
+from collections.abc import AsyncIterator
+from typing import Any
 
 from gql import Client, gql
 from gql.transport.aiohttp import AIOHTTPTransport
@@ -36,20 +38,18 @@ class IndexerClient:
         self._http_client: Client | None = None
         self._ws_client: Client | None = None
 
-    async def __aenter__(self) -> "IndexerClient":
+    async def __aenter__(self) -> IndexerClient:
         transport = AIOHTTPTransport(url=self._http_url)
         self._http_client = Client(transport=transport, fetch_schema_from_transport=False)
         await self._http_client.__aenter__()
         return self
 
-    async def __aexit__(self, *args: Any) -> None:
+    async def __aexit__(self, *args: object) -> None:
         if self._http_client:
             await self._http_client.__aexit__(*args)
 
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(min=1, max=10))
-    async def get_block(
-        self, height: int | None = None, hash_hex: str | None = None
-    ) -> Block:
+    async def get_block(self, height: int | None = None, hash_hex: str | None = None) -> Block:
         """Get block by height or hash. Default: latest block."""
         try:
             result = await self._http_client.execute_async(  # type: ignore[union-attr]
@@ -73,9 +73,7 @@ class IndexerClient:
                 gql(GET_TRANSACTIONS),
                 variable_values={"hash": hash, "address": address, "limit": limit},
             )
-            return [
-                Transaction.model_validate(tx) for tx in result["transactions"]["nodes"]
-            ]
+            return [Transaction.model_validate(tx) for tx in result["transactions"]["nodes"]]
         except Exception as e:
             raise IndexerError(f"get_transactions failed: {e}") from e
 
@@ -137,9 +135,7 @@ class IndexerClient:
             ):
                 yield result["shieldedTransaction"]
 
-    async def get_dust_status(
-        self, cardano_stake_keys: list[str]
-    ) -> list[DustGenerationStatus]:
+    async def get_dust_status(self, cardano_stake_keys: list[str]) -> list[DustGenerationStatus]:
         """Query DUST generation status for Cardano stake keys."""
         result = await self._http_client.execute_async(  # type: ignore[union-attr]
             gql(GET_DUST_STATUS),

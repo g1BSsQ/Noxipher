@@ -77,4 +77,3 @@ query GetUtxos($address: String!) {
     }
 }
 """
-

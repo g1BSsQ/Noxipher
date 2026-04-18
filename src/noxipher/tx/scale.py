@@ -21,6 +21,7 @@ Test vectors (from serialize/tests/serialize.rs):
 Tagged serialization format (from serializable.rs):
   tagged_serialize(value) = b"midnight:" + tag + b":" + serialize(value)
 """
+
 from __future__ import annotations
 
 SCALE_MAX_BYTES = 67
@@ -51,21 +52,21 @@ class ScaleBigInt:
         self._data[: len(value_bytes)] = value_bytes
 
     @classmethod
-    def from_int(cls, value: int, n_bytes: int) -> "ScaleBigInt":
+    def from_int(cls, value: int, n_bytes: int) -> ScaleBigInt:
         """Create from integer with explicit byte width (4, 8, or 16)."""
         le_bytes = value.to_bytes(n_bytes, "little")
         return cls(le_bytes)
 
     @classmethod
-    def from_u32(cls, value: int) -> "ScaleBigInt":
+    def from_u32(cls, value: int) -> ScaleBigInt:
         return cls.from_int(value, 4)
 
     @classmethod
-    def from_u64(cls, value: int) -> "ScaleBigInt":
+    def from_u64(cls, value: int) -> ScaleBigInt:
         return cls.from_int(value, 8)
 
     @classmethod
-    def from_u128(cls, value: int) -> "ScaleBigInt":
+    def from_u128(cls, value: int) -> ScaleBigInt:
         return cls.from_int(value, 16)
 
     def serialized_size(self) -> int:
@@ -88,7 +89,9 @@ class ScaleBigInt:
             return 1
         elif (occupied == 1 and not can_squeeze) or (occupied == 2 and can_squeeze):
             return 2
-        elif (occupied == 2 and not can_squeeze) or occupied == 3 or (occupied == 4 and can_squeeze):
+        elif (
+            (occupied == 2 and not can_squeeze) or occupied == 3 or (occupied == 4 and can_squeeze)
+        ):
             return 4
         else:
             return occupied + 1
@@ -101,6 +104,7 @@ class ScaleBigInt:
           size 4: 4 bytes with interleaved top2/bot6 packing
           size n: [(n-5)<<2 | N_BYTE, data[0..n-1]]
         """
+
         def top2bits(b: int) -> int:
             return (b & 0b1100_0000) >> 6
 
@@ -127,7 +131,7 @@ class ScaleBigInt:
             return bytes([header]) + bytes(d[: size - 1])
 
     @classmethod
-    def deserialize(cls, data: bytes, offset: int = 0) -> tuple["ScaleBigInt", int]:
+    def deserialize(cls, data: bytes, offset: int = 0) -> tuple[ScaleBigInt, int]:
         """
         Decode ScaleBigInt from bytes at offset.
         Returns (ScaleBigInt, bytes_consumed).
@@ -174,6 +178,7 @@ class ScaleBigInt:
 # ─────────────────────────────────────────────────────────────────
 # Convenience helpers for common types (mirrors via_scale! macro)
 # ─────────────────────────────────────────────────────────────────
+
 
 def serialize_u32(value: int) -> bytes:
     return ScaleBigInt.from_u32(value).serialize()
@@ -234,6 +239,7 @@ def serialize_string(s: str) -> bytes:
 # Tagged serialization protocol
 # ─────────────────────────────────────────────────────────────────
 
+
 def tagged_serialize(tag: str, payload: bytes) -> bytes:
     """
     Midnight tagged serialization format (from serializable.rs):
@@ -250,15 +256,14 @@ def tagged_deserialize(data: bytes, expected_tag: str) -> bytes:
     """
     prefix = f"{GLOBAL_TAG}{expected_tag}:".encode("ascii")
     if not data.startswith(prefix):
-        raise ValueError(
-            f"Expected tag 'midnight:{expected_tag}:', got prefix: {data[:50]!r}"
-        )
-    return data[len(prefix):]
+        raise ValueError(f"Expected tag 'midnight:{expected_tag}:', got prefix: {data[:50]!r}")
+    return data[len(prefix) :]
 
 
 # ─────────────────────────────────────────────────────────────────
 # Midnight Complex Types Serializers
 # ─────────────────────────────────────────────────────────────────
+
 
 def serialize_transaction(transaction: dict) -> bytes:
     """
@@ -277,17 +282,17 @@ def serialize_standard_transaction(stx: dict) -> bytes:
     """
     payload = bytearray()
     payload += serialize_string(stx["network_id"])
-    
+
     # intents: HashMap<u16, Intent> -> serialize as Vec<(u16, Intent)>
     intents = stx["intents"]
     payload += serialize_u32(len(intents))
     for k, v in intents.items():
         payload += serialize_le_u16(int(k))
         payload += serialize_intent(v)
-    
+
     # guaranteed_coins: Option<Sp<ZswapOffer>>
     payload += serialize_option(stx.get("guaranteed_coins"))
-    
+
     # fallible_coins: HashMap<u16, ZswapOffer>
     fallible_coins = stx.get("fallible_coins", {})
     payload += serialize_u32(len(fallible_coins))
@@ -295,50 +300,52 @@ def serialize_standard_transaction(stx: dict) -> bytes:
         payload += serialize_le_u16(int(k))
         # payload += serialize_zswap_offer(v) # Not implemented yet
         payload += v
-        
+
     # binding_randomness: PedersenRandomness (32 bytes)
     payload += stx.get("binding_randomness", b"\x00" * 32)
-    
+
     return tagged_serialize("standard-transaction[v9]", bytes(payload))
 
 
 def serialize_intent(intent: dict) -> bytes:
     """
     Intent [v6].
-    Fields: guaranteed_unshielded_offer, fallible_unshielded_offer, actions, dust_actions, ttl, binding_commitment
+    Fields: guaranteed_unshielded_offer, fallible_unshielded_offer, actions,
+    dust_actions, ttl, binding_commitment
+
     """
     payload = bytearray()
-    
+
     # guaranteed_unshielded_offer: Option<Sp<UnshieldedOffer>>
     guo = intent.get("guaranteed_unshielded_offer")
     if guo:
         payload += bytes([1]) + serialize_unshielded_offer(guo)
     else:
         payload += bytes([0])
-        
+
     # fallible_unshielded_offer: Option<Sp<UnshieldedOffer>>
     fuo = intent.get("fallible_unshielded_offer")
     if fuo:
         payload += bytes([1]) + serialize_unshielded_offer(fuo)
     else:
         payload += bytes([0])
-        
+
     # actions: Array<ContractAction>
     actions = intent.get("actions", [])
     payload += serialize_u32(len(actions))
     for act in actions:
         # payload += serialize_contract_action(act) # Not implemented yet
         payload += act
-        
+
     # dust_actions: Option<Sp<DustActions>>
     payload += serialize_option(intent.get("dust_actions"))
-    
+
     # ttl: Timestamp (u64)
     payload += serialize_u64(intent.get("ttl", 0))
-    
+
     # binding_commitment: Pedersen (Fr/32 bytes)
     payload += intent.get("binding_commitment", b"\x00" * 32)
-    
+
     return tagged_serialize("intent[v6]", bytes(payload))
 
 
@@ -348,26 +355,26 @@ def serialize_unshielded_offer(offer: dict) -> bytes:
     Fields: inputs (Array<UtxoSpend>), outputs (Array<UtxoOutput>), signatures (Array<Signature>)
     """
     payload = bytearray()
-    
+
     # inputs: Array<UtxoSpend>
     inputs = offer.get("inputs", [])
     payload += serialize_u32(len(inputs))
     for i in inputs:
         payload += serialize_utxo_spend(i)
-        
+
     # outputs: Array<UtxoOutput>
     outputs = offer.get("outputs", [])
     payload += serialize_u32(len(outputs))
     for o in outputs:
         payload += serialize_utxo_output(o)
-        
+
     # signatures: Array<Signature>
     sigs = offer.get("signatures", [])
     payload += serialize_u32(len(sigs))
     for s in sigs:
         # Each signature is 64 bytes raw
         payload += s
-        
+
     return tagged_serialize("unshielded-offer[v1]", bytes(payload))
 
 
@@ -382,7 +389,7 @@ def serialize_utxo_spend(spend: dict) -> bytes:
     payload += bytes([spend.get("type_", 0)])  # u8, NIGHT=0
     payload += spend["intent_hash"]  # 32 bytes
     payload += serialize_u32(spend["output_no"])
-    
+
     return tagged_serialize("unshielded-utxo-spend", bytes(payload))
 
 
@@ -395,9 +402,8 @@ def serialize_utxo_output(output: dict) -> bytes:
     payload += serialize_u128(output["value"])
     payload += output["owner"]  # 32 bytes
     payload += bytes([output.get("type_", 0)])  # u8, NIGHT=0
-    
-    return tagged_serialize("unshielded-utxo-output[v1]", bytes(payload))
 
+    return tagged_serialize("unshielded-utxo-output[v1]", bytes(payload))
 
 
 def serialize_intent_fields(intent: dict) -> bytes:
@@ -406,36 +412,36 @@ def serialize_intent_fields(intent: dict) -> bytes:
     Used for hash-intent signing and inner intent serialization.
     """
     payload = bytearray()
-    
+
     # guaranteed_unshielded_offer: Option<Sp<UnshieldedOffer>>
     guo = intent.get("guaranteed_unshielded_offer")
     if guo:
         payload += bytes([1]) + serialize_unshielded_offer(guo)
     else:
         payload += bytes([0])
-        
+
     # fallible_unshielded_offer: Option<Sp<UnshieldedOffer>>
     fuo = intent.get("fallible_unshielded_offer")
     if fuo:
         payload += bytes([1]) + serialize_unshielded_offer(fuo)
     else:
         payload += bytes([0])
-        
+
     # actions: Array<ContractAction>
     actions = intent.get("actions", [])
     payload += serialize_u32(len(actions))
     for act in actions:
         payload += act
-        
+
     # dust_actions: Option<Sp<DustActions>>
     payload += serialize_option(intent.get("dust_actions"))
-    
+
     # ttl: Timestamp (u64)
     payload += serialize_u64(intent.get("ttl", 0))
-    
+
     # binding_commitment: Pedersen (Fr/32 bytes)
     payload += intent.get("binding_commitment", b"\x00" * 32)
-    
+
     return bytes(payload)
 
 
@@ -455,6 +461,7 @@ def get_unshielded_signing_payload(segment_id: int, intent: dict) -> bytes:
 # These are DIFFERENT from ScaleBigInt — used only for the outer
 # Substrate extrinsic framing layer.
 # ─────────────────────────────────────────────────────────────────
+
 
 class SubstrateScaleEncoder:
     """
@@ -486,6 +493,7 @@ class SubstrateScaleEncoder:
 # Transaction Serializer
 # ─────────────────────────────────────────────────────────────────
 
+
 class MidnightTransactionSerializer:
     """
     Serialize Midnight transaction → raw bytes for author_submitExtrinsic.
@@ -503,7 +511,6 @@ class MidnightTransactionSerializer:
 
         # extrinsic: version (0x04) + call_data
         extrinsic_body = bytes([0x04]) + call_data
-        
+
         # RPC expects length-prefixed extrinsic body
         return SubstrateScaleEncoder.length_prefixed(extrinsic_body)
-

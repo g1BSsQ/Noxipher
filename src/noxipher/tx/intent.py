@@ -1,4 +1,5 @@
 """Transaction intent types."""
+
 from pydantic import BaseModel
 
 from noxipher.tx.offer import ZswapOffer

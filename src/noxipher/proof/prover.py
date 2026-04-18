@@ -1,11 +1,12 @@
 """
 ZKProver — orchestrate ZK proof generation for Midnight transactions.
 """
+
 from __future__ import annotations
 
 from noxipher.core.exceptions import ProofError
 from noxipher.proof.client import ProofServerClient
-from noxipher.tx.models import UnsignedTransaction, ProvenTransaction
+from noxipher.tx.models import ProvenTransaction, UnsignedTransaction
 
 
 class ZKProver:
@@ -23,7 +24,7 @@ class ZKProver:
         # Verify proof server is running
         health = await self._client.health()
         if not health:
-             raise ProofError("Proof Server is unreachable")
+            raise ProofError("Proof Server is unreachable")
 
         # Collect circuits that need proving
         circuits = unsigned_tx.circuits
@@ -35,7 +36,7 @@ class ZKProver:
                 fallible_hexes=unsigned_tx.fallible_hexes,
                 proof_hexes=[],
                 requires_unshielded_signature=unsigned_tx.requires_unshielded_signature,
-                signing_payload_hex=unsigned_tx.signing_payload_hex
+                signing_payload_hex=unsigned_tx.signing_payload_hex,
             )
 
         proof_hexes = []
@@ -59,5 +60,5 @@ class ZKProver:
             fallible_hexes=unsigned_tx.fallible_hexes,
             proof_hexes=proof_hexes,
             requires_unshielded_signature=unsigned_tx.requires_unshielded_signature,
-            signing_payload_hex=unsigned_tx.signing_payload_hex
+            signing_payload_hex=unsigned_tx.signing_payload_hex,
         )

@@ -1,6 +1,7 @@
 """
 ContractService — deploy and manage Compact contracts.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -17,7 +18,7 @@ if TYPE_CHECKING:
 class ContractService:
     """Service for deploying and interacting with Compact contracts."""
 
-    def __init__(self, client: "NoxipherClient") -> None:
+    def __init__(self, client: NoxipherClient) -> None:
         self._client = client
 
     def load_contract(self, circuit_dir: Path) -> CompactContract:
@@ -27,7 +28,7 @@ class ContractService:
     async def deploy(
         self,
         contract: CompactContract,
-        wallet: "MidnightWallet",
+        wallet: MidnightWallet,
         initial_state: dict | None = None,
     ) -> ContractInstance:
         """
@@ -36,14 +37,8 @@ class ContractService:
         Returns: ContractInstance with deployed address.
         """
         # TODO: Full deployment flow needs transaction builder
-        raise NotImplementedError(
-            "Contract deployment needs full tx builder implementation"
-        )
+        raise NotImplementedError("Contract deployment needs full tx builder implementation")
 
-    def at_address(
-        self, address: str, contract: CompactContract
-    ) -> ContractInstance:
+    def at_address(self, address: str, contract: CompactContract) -> ContractInstance:
         """Create ContractInstance for an already-deployed contract."""
-        return ContractInstance(
-            address=address, contract=contract, client=self._client
-        )
+        return ContractInstance(address=address, contract=contract, client=self._client)

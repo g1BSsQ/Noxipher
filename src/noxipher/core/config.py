@@ -1,8 +1,9 @@
-from enum import Enum
-from pydantic import BaseModel, HttpUrl, Field
-from typing import Dict
+from enum import StrEnum
 
-class Network(str, Enum):
+from pydantic import AnyUrl, BaseModel, Field, HttpUrl
+
+
+class Network(StrEnum):
     MAINNET = "mainnet"
     TESTNET = "testnet"
     PREPROD = "preprod"
@@ -11,8 +12,6 @@ class Network(str, Enum):
     LOCAL = "local"
     UNDEPLOYED = "undeployed"
 
-from typing import Optional
-from pydantic import BaseModel, HttpUrl, Field, AnyUrl
 
 class NetworkConfig(BaseModel):
     name: str
@@ -21,10 +20,11 @@ class NetworkConfig(BaseModel):
     indexer_ws_url: AnyUrl
     indexer_http_url: HttpUrl
     proof_server_url: HttpUrl
-    hosted_proof_server_url: Optional[HttpUrl] = None
+    hosted_proof_server_url: HttpUrl | None = None
     coin_type: int = Field(default=877, description="SLIP-0044 Coin Type")
 
-NETWORK_CONFIGS: Dict[Network, NetworkConfig] = {
+
+NETWORK_CONFIGS: dict[Network, NetworkConfig] = {
     Network.MAINNET: NetworkConfig(
         name="Midnight Mainnet",
         network=Network.MAINNET,
@@ -32,7 +32,7 @@ NETWORK_CONFIGS: Dict[Network, NetworkConfig] = {
         indexer_ws_url="wss://indexer.midnight.network/api/v4/graphql",
         indexer_http_url="https://indexer.midnight.network/api/v4/graphql",
         proof_server_url="http://localhost:6300",
-        hosted_proof_server_url="https://proof.mainnet.midnight.network"
+        hosted_proof_server_url="https://proof.mainnet.midnight.network",
     ),
     Network.PREVIEW: NetworkConfig(
         name="Midnight Preview",
@@ -40,7 +40,7 @@ NETWORK_CONFIGS: Dict[Network, NetworkConfig] = {
         node_ws_url="wss://rpc.preview.midnight.network",
         indexer_ws_url="wss://indexer.preview.midnight.network/api/v4/graphql",
         indexer_http_url="https://indexer.preview.midnight.network/api/v4/graphql",
-        proof_server_url="http://localhost:6300"
+        proof_server_url="http://localhost:6300",
     ),
     Network.PREPROD: NetworkConfig(
         name="Midnight Preprod",
@@ -48,7 +48,7 @@ NETWORK_CONFIGS: Dict[Network, NetworkConfig] = {
         node_ws_url="wss://rpc.preprod.midnight.network",
         indexer_ws_url="wss://indexer.preprod.midnight.network/api/v4/graphql",
         indexer_http_url="https://indexer.preprod.midnight.network/api/v4/graphql",
-        proof_server_url="http://localhost:6300"
+        proof_server_url="http://localhost:6300",
     ),
     Network.TESTNET: NetworkConfig(
         name="Midnight Testnet",
@@ -56,7 +56,7 @@ NETWORK_CONFIGS: Dict[Network, NetworkConfig] = {
         node_ws_url="wss://rpc.testnet.midnight.network",
         indexer_ws_url="wss://indexer.testnet.midnight.network/api/v4/graphql",
         indexer_http_url="https://indexer.testnet.midnight.network/api/v4/graphql",
-        proof_server_url="http://localhost:6300"
+        proof_server_url="http://localhost:6300",
     ),
     Network.DEVNET: NetworkConfig(
         name="Midnight Devnet",
@@ -64,7 +64,7 @@ NETWORK_CONFIGS: Dict[Network, NetworkConfig] = {
         node_ws_url="wss://rpc.devnet.midnight.network",
         indexer_ws_url="wss://indexer.devnet.midnight.network/api/v4/graphql",
         indexer_http_url="https://indexer.devnet.midnight.network/api/v4/graphql",
-        proof_server_url="http://localhost:6300"
+        proof_server_url="http://localhost:6300",
     ),
     Network.LOCAL: NetworkConfig(
         name="Midnight Local",
@@ -72,7 +72,7 @@ NETWORK_CONFIGS: Dict[Network, NetworkConfig] = {
         node_ws_url="ws://127.0.0.1:9944",
         indexer_ws_url="ws://127.0.0.1:8088/api/v4/graphql",
         indexer_http_url="http://127.0.0.1:8088/api/v4/graphql",
-        proof_server_url="http://localhost:6300"
+        proof_server_url="http://localhost:6300",
     ),
     Network.UNDEPLOYED: NetworkConfig(
         name="Midnight Undeployed",
@@ -80,6 +80,6 @@ NETWORK_CONFIGS: Dict[Network, NetworkConfig] = {
         node_ws_url="ws://localhost:9944",
         indexer_ws_url="ws://localhost:8088/api/v4/graphql",
         indexer_http_url="http://localhost:8088/api/v4/graphql",
-        proof_server_url="http://localhost:6300"
+        proof_server_url="http://localhost:6300",
     ),
 }

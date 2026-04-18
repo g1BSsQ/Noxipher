@@ -1,7 +1,6 @@
 """Unit tests for core config module."""
-import pytest
 
-from noxipher.core.config import Network, NetworkConfig, NETWORK_CONFIGS
+from noxipher.core.config import NETWORK_CONFIGS, Network
 
 
 class TestNetwork:

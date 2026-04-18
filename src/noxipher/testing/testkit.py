@@ -7,7 +7,13 @@ Fixtures:
   - TEST_MNEMONIC: deterministic test mnemonic
   - TEST_SEED: all-zeros 32-byte seed (for fast unit tests)
 """
+
 from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from noxipher.wallet.wallet import MidnightWallet
 
 import httpx
 import respx
@@ -50,11 +56,11 @@ class MockProofServer:
             )
         )
 
-    def __enter__(self):
+    def __enter__(self) -> MockProofServer:
         self._router.start()
         return self
 
-    def __exit__(self, *args):
+    def __exit__(self, *args: object) -> None:
         self._router.stop()
 
 
@@ -99,7 +105,7 @@ class MockIndexerResponses:
         }
 
 
-def make_test_wallet(network: str = "preprod"):
+def make_test_wallet(network: str = "preprod") -> MidnightWallet:
     """
     Create MidnightWallet from test mnemonic.
     Deterministic — same keys every time.

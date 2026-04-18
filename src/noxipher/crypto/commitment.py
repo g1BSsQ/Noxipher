@@ -3,6 +3,7 @@ Shielded coin commitment models.
 
 Mapping from Ledger API v8 types.
 """
+
 from pydantic import BaseModel
 
 

@@ -1,6 +1,7 @@
 """
 ZSwap pool — privacy pool operations.
 """
+
 from __future__ import annotations
 
 from noxipher.zswap.state import ZswapState

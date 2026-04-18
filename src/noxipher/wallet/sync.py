@@ -1,6 +1,7 @@
 """
 WalletSyncer — Sync wallet state from Indexer.
 """
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -21,7 +22,7 @@ class WalletSyncer:
     Handles both unshielded (UTxO scan) and shielded (session-based) sync.
     """
 
-    def __init__(self, wallet: "MidnightWallet", indexer: "IndexerClient") -> None:
+    def __init__(self, wallet: MidnightWallet, indexer: IndexerClient) -> None:
         self._wallet = wallet
         self._indexer = indexer
 

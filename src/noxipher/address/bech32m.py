@@ -6,16 +6,15 @@ Key difference: Bech32m uses constant 0x2bc830a3 instead of 1.
 
 HRP table from docs.midnight.network (Apr 2026):
   Unshielded: mn_addr, mn_addr_preprod, mn_addr_preview, mn_addr_undeployed
-  Shielded:   mn_shield-addr, mn_shield-addr_preprod, mn_shield-addr_preview, mn_shield-addr_undeployed
+  Shielded:   mn_shield-addr, mn_shield-addr_preprod, mn_shield-addr_preview,
+              mn_shield-addr_undeployed
   DUST:       mn_dust, mn_dust_preprod, mn_dust_preview, mn_dust_undeployed
 """
-from __future__ import annotations
 
-from typing import Sequence
+from __future__ import annotations
 
 from noxipher.core.config import Network
 from noxipher.core.exceptions import AddressError
-
 
 # ─── Bech32m constants (BIP-350) ───
 BECH32M_CONST = 0x2BC830A3

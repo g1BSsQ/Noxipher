@@ -20,6 +20,7 @@ Midnight custom RPC methods (from pallets/midnight/rpc/src/lib.rs):
   - midnight_ledgerVersion(at?)           → Ledger version string
   - midnight_apiVersions()                → [2] (API version array)
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -56,8 +57,7 @@ class NodeClient:
         """Connect to Midnight node via WebSocket."""
         if not SUBSTRATE_AVAILABLE:
             raise ConnectionError(
-                "substrate-interface not installed. "
-                "Install with: pip install noxipher[node]"
+                "substrate-interface not installed. Install with: pip install noxipher[node]"
             )
         try:
             self._substrate = await asyncio.to_thread(
@@ -77,11 +77,11 @@ class NodeClient:
                 pass
             self._substrate = None
 
-    async def __aenter__(self) -> "NodeClient":
+    async def __aenter__(self) -> NodeClient:
         await self.connect()
         return self
 
-    async def __aexit__(self, *args: Any) -> None:
+    async def __aexit__(self, *args: object) -> None:
         await self.disconnect()
 
     def _require_connection(self) -> None:
@@ -96,7 +96,9 @@ class NodeClient:
         """Verify connected to correct chain (e.g., 'Midnight Devnet')."""
         self._require_connection()
         result = await asyncio.to_thread(
-            self._substrate.rpc_request, "system_chain", []  # type: ignore[union-attr]
+            self._substrate.rpc_request,
+            "system_chain",
+            [],  # type: ignore[union-attr]
         )
         return result.get("result", "")
 
@@ -104,7 +106,9 @@ class NodeClient:
         """Get runtime version info including spec_version."""
         self._require_connection()
         result = await asyncio.to_thread(
-            self._substrate.rpc_request, "state_getRuntimeVersion", []  # type: ignore[union-attr]
+            self._substrate.rpc_request,
+            "state_getRuntimeVersion",
+            [],  # type: ignore[union-attr]
         )
         return result.get("result", {})
 
@@ -113,7 +117,9 @@ class NodeClient:
         self._require_connection()
         params = [height] if height is not None else []
         result = await asyncio.to_thread(
-            self._substrate.rpc_request, "chain_getBlockHash", params  # type: ignore[union-attr]
+            self._substrate.rpc_request,
+            "chain_getBlockHash",
+            params,  # type: ignore[union-attr]
         )
         return result.get("result", "")
 
@@ -122,7 +128,9 @@ class NodeClient:
         self._require_connection()
         params = [block_hash] if block_hash else []
         result = await asyncio.to_thread(
-            self._substrate.rpc_request, "chain_getBlock", params  # type: ignore[union-attr]
+            self._substrate.rpc_request,
+            "chain_getBlock",
+            params,  # type: ignore[union-attr]
         )
         return result.get("result", {})
 
@@ -130,7 +138,9 @@ class NodeClient:
         """Get the hash of the latest finalized block."""
         self._require_connection()
         result = await asyncio.to_thread(
-            self._substrate.rpc_request, "chain_getFinalizedHead", []  # type: ignore[union-attr]
+            self._substrate.rpc_request,
+            "chain_getFinalizedHead",
+            [],  # type: ignore[union-attr]
         )
         return result.get("result", "")
 
@@ -139,7 +149,9 @@ class NodeClient:
         self._require_connection()
         params = [block_hash] if block_hash else []
         result = await asyncio.to_thread(
-            self._substrate.rpc_request, "chain_getHeader", params  # type: ignore[union-attr]
+            self._substrate.rpc_request,
+            "chain_getHeader",
+            params,  # type: ignore[union-attr]
         )
         return result.get("result", {})
 
@@ -227,7 +239,9 @@ class NodeClient:
         )
         return result.get("result", [])
 
-    async def get_contract_state(self, contract_address_hex: str, block_hash: str | None = None) -> str:
+    async def get_contract_state(
+        self, contract_address_hex: str, block_hash: str | None = None
+    ) -> str:
         """
         Get serialized contract state for a deployed contract.
 
@@ -249,7 +263,9 @@ class NodeClient:
         )
         return result.get("result", "")
 
-    async def get_contract_state_bytes(self, contract_address_hex: str, block_hash: str | None = None) -> bytes:
+    async def get_contract_state_bytes(
+        self, contract_address_hex: str, block_hash: str | None = None
+    ) -> bytes:
         """get_contract_state() returning raw bytes."""
         raw = await self.get_contract_state(contract_address_hex, block_hash)
         if isinstance(raw, str) and raw.startswith("0x"):
@@ -306,9 +322,7 @@ class NodeClient:
         )
         return [str(t) for t in types]
 
-    async def get_pallet_call_index(
-        self, pallet_name: str, call_name: str
-    ) -> tuple[int, int]:
+    async def get_pallet_call_index(self, pallet_name: str, call_name: str) -> tuple[int, int]:
         """
         Get the call index for a pallet call from runtime metadata.
 

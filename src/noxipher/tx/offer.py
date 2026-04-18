@@ -1,4 +1,5 @@
 """ZSwap offer types."""
+
 from pydantic import BaseModel
 
 

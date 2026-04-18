@@ -1,4 +1,5 @@
 """Unit tests for hash utilities."""
+
 from noxipher.crypto.hash import blake2_256, hmac_sha256, hmac_sha512
 
 
