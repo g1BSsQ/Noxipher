@@ -85,7 +85,7 @@ def test_unshielded_transaction_structure() -> None:
 
     # Extrinsic version 0x04, Pallet 5, Call 0
     # body = [0x04, 0x05, 0x00, ...]
-    # wrapped in length prefix
-    assert extrinsic[1] == 0x04
-    assert extrinsic[2] == 0x05
-    assert extrinsic[3] == 0x00
+    # wrapped in length prefix (2 bytes for ~431 bytes)
+    assert extrinsic[2] == 0x04
+    assert extrinsic[3] == 0x05
+    assert extrinsic[4] == 0x00

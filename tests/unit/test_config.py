@@ -28,7 +28,7 @@ class TestNetworkConfig:
         assert config.network == Network.PREPROD
         assert "preprod" in str(config.node_ws_url)
         assert "preprod" in str(config.indexer_http_url)
-        assert str(config.proof_server_url) == "http://localhost:6300/"
+        assert str(config.proof_server_url) == "http://localhost:6300"
 
     def test_mainnet_has_hosted_proof(self) -> None:
         config = NETWORK_CONFIGS[Network.MAINNET]
