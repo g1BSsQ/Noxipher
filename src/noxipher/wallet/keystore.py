@@ -4,6 +4,9 @@ Keystore — Argon2id + AES-256-GCM encrypted key storage.
 
 from __future__ import annotations
 
+from typing import Any
+
+
 import json
 import secrets
 from pathlib import Path
@@ -26,11 +29,11 @@ class Keystore:
     """
 
     @staticmethod
-    def encrypt(data: bytes, password: str) -> dict:
+    def encrypt(data: bytes, password: str) -> dict[str, Any]:
         """
         Encrypt data with password.
 
-        Returns: keystore dict (JSON-serializable)
+        Returns: keystore dict[str, Any] (JSON-serializable)
         """
         salt = secrets.token_bytes(32)
         nonce = secrets.token_bytes(12)  # AES-GCM nonce
@@ -68,7 +71,7 @@ class Keystore:
         }
 
     @staticmethod
-    def decrypt(keystore: dict, password: str) -> bytes:
+    def decrypt(keystore: dict[str, Any], password: str) -> bytes:
         """
         Decrypt keystore with password.
 
@@ -95,11 +98,11 @@ class Keystore:
         return aesgcm.decrypt(nonce, ciphertext, None)
 
     @staticmethod
-    def save(keystore: dict, path: Path) -> None:
+    def save(keystore: dict[str, Any], path: Path) -> None:
         """Save keystore to file."""
         path.write_text(json.dumps(keystore, indent=2))
 
     @staticmethod
-    def load(path: Path) -> dict:
+    def load(path: Path) -> dict[str, Any]:
         """Load keystore from file."""
         return json.loads(path.read_text())

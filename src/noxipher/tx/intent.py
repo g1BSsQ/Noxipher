@@ -1,6 +1,9 @@
 """Transaction intent types."""
 
+from typing import Any
+
 from pydantic import BaseModel
+
 
 from noxipher.tx.offer import ZswapOffer
 
@@ -10,7 +13,8 @@ class ContractCallPrototype(BaseModel):
 
     contract_address: str
     entry_point: str
-    args: dict = {}
+    args: dict[str, Any] = {}
+
 
 
 class Intent(BaseModel):

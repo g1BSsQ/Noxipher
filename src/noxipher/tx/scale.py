@@ -24,6 +24,9 @@ Tagged serialization format (from serializable.rs):
 
 from __future__ import annotations
 
+from typing import Any
+
+
 SCALE_MAX_BYTES = 67
 SCALE_ONE_BYTE_MARKER = 0b00
 SCALE_TWO_BYTE_MARKER = 0b01
@@ -265,7 +268,7 @@ def tagged_deserialize(data: bytes, expected_tag: str) -> bytes:
 # ─────────────────────────────────────────────────────────────────
 
 
-def serialize_transaction(transaction: dict) -> bytes:
+def serialize_transaction(transaction: dict[str, Any]) -> bytes:
     """
     Transaction enum [v9].
     Discriminant 0 = StandardTransaction.
@@ -275,7 +278,7 @@ def serialize_transaction(transaction: dict) -> bytes:
     return tagged_serialize("transaction[v9]", payload)
 
 
-def serialize_standard_transaction(stx: dict) -> bytes:
+def serialize_standard_transaction(stx: dict[str, Any]) -> bytes:
     """
     StandardTransaction [v9].
     Fields: network_id, intents, guaranteed_coins, fallible_coins, binding_randomness
@@ -307,7 +310,7 @@ def serialize_standard_transaction(stx: dict) -> bytes:
     return tagged_serialize("standard-transaction[v9]", bytes(payload))
 
 
-def serialize_intent(intent: dict) -> bytes:
+def serialize_intent(intent: dict[str, Any]) -> bytes:
     """
     Intent [v6].
     Fields: guaranteed_unshielded_offer, fallible_unshielded_offer, actions,
@@ -349,7 +352,7 @@ def serialize_intent(intent: dict) -> bytes:
     return tagged_serialize("intent[v6]", bytes(payload))
 
 
-def serialize_unshielded_offer(offer: dict) -> bytes:
+def serialize_unshielded_offer(offer: dict[str, Any]) -> bytes:
     """
     UnshieldedOffer [v1].
     Fields: inputs (Array<UtxoSpend>), outputs (Array<UtxoOutput>), signatures (Array<Signature>)
@@ -378,7 +381,7 @@ def serialize_unshielded_offer(offer: dict) -> bytes:
     return tagged_serialize("unshielded-offer[v1]", bytes(payload))
 
 
-def serialize_utxo_spend(spend: dict) -> bytes:
+def serialize_utxo_spend(spend: dict[str, Any]) -> bytes:
     """
     UtxoSpend.
     Fields: value (u128), owner (VerifyingKey/32B), type_ (u8), intent_hash (32B), output_no (u32)
@@ -393,7 +396,7 @@ def serialize_utxo_spend(spend: dict) -> bytes:
     return tagged_serialize("unshielded-utxo-spend", bytes(payload))
 
 
-def serialize_utxo_output(output: dict) -> bytes:
+def serialize_utxo_output(output: dict[str, Any]) -> bytes:
     """
     UtxoOutput [v1].
     Fields: value (u128), owner (UserAddress/32B), type_ (u8)
@@ -406,7 +409,7 @@ def serialize_utxo_output(output: dict) -> bytes:
     return tagged_serialize("unshielded-utxo-output[v1]", bytes(payload))
 
 
-def serialize_intent_fields(intent: dict) -> bytes:
+def serialize_intent_fields(intent: dict[str, Any]) -> bytes:
     """
     Serialize Intent fields without the 'intent[v6]' tag.
     Used for hash-intent signing and inner intent serialization.
@@ -445,7 +448,8 @@ def serialize_intent_fields(intent: dict) -> bytes:
     return bytes(payload)
 
 
-def get_unshielded_signing_payload(segment_id: int, intent: dict) -> bytes:
+def get_unshielded_signing_payload(segment_id: int, intent: dict[str, Any]) -> bytes:
+
     """
     Generate the bytes that need to be signed by the unshielded wallet.
     Prefix: 'midnight:hash-intent:'

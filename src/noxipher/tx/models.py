@@ -13,7 +13,10 @@ Tagged serialization tags (from Tagged impls in structure.rs):
 
 from __future__ import annotations
 
+from typing import Any
+
 from pydantic import BaseModel
+
 
 
 class TransactionReceipt(BaseModel):
@@ -116,7 +119,8 @@ class UnsignedTransaction(BaseModel):
     signing_payload_hex: str = ""  # Populated after balancing
 
     # For internal use
-    circuits: list[dict] = []  # ZK circuits needing proof
+    circuits: list[dict[str, Any]] = []  # ZK circuits needing proof
+
     guaranteed_hex: str = ""  # Pre-serialized guaranteed segment
     fallible_hexes: list[str] = []
 

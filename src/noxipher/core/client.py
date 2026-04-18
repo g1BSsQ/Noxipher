@@ -5,7 +5,7 @@ from .health import HealthStatus, ServiceHealth
 from .logger import get_logger
 
 if TYPE_CHECKING:
-    from noxipher.tx.builder import TransactionReceipt
+    from noxipher.tx.models import TransactionReceipt
     from noxipher.wallet.wallet import MidnightWallet
 
 
@@ -31,8 +31,9 @@ class NoxipherClient:
 
         self.node = NodeClient(self.config)
         self.indexer = IndexerClient(self.config)
-        self.proof = ProofServerClient(self.config)
+        self.proof = ProofServerClient(self.config.proof_server_url)
         self.tx = TransactionBuilder(self)
+
 
     async def __aenter__(self) -> "NoxipherClient":
         await self.connect()
@@ -44,26 +45,29 @@ class NoxipherClient:
     async def connect(self) -> None:
         """Establishes connections to all Midnight network components."""
         logger.info("Connecting to Midnight network components...")
-        # Indexer and Node clients manage their own connections/sessions
-        # but we can do a health check here to ensure they are reachable
         await self.node.connect()
         await self.indexer.__aenter__()
-        logger.info("Connected to Node and Indexer")
+        await self.proof.__aenter__()
+        logger.info("Connected to Node, Indexer, and Proof Server")
 
     async def disconnect(self) -> None:
         """Closes all network connections gracefully."""
         logger.info("Disconnecting NoxipherClient...")
         await self.node.disconnect()
         await self.indexer.__aexit__(None, None, None)
+        await self.proof.__aexit__(None, None, None)
 
     async def check_health(self) -> ServiceHealth:
         """Checks the health of all network components."""
         node_health = await self.node.get_health()
-        proof_health = await self.proof.health()
+        
+        try:
+            proof_health = await self.proof.health()
+        except Exception:
+            proof_health = {}
 
         # Simple heuristic for indexer health
         try:
-            # Try to get genesis block or something light
             await self.indexer.get_block(height=0)
             indexer_ok = True
         except Exception:
@@ -75,9 +79,10 @@ class NoxipherClient:
             status=status,
             node_connected=node_health is not None,
             indexer_connected=indexer_ok,
-            proof_server_connected="version" in proof_health,
+            proof_server_connected="version" in proof_health or proof_health.get("status") == "ok",
             details={"node": node_health, "proof_server": proof_health},
         )
+
 
     async def get_balance(self, wallet: "MidnightWallet") -> dict[str, int]:
         """Gets the unshielded balance of the given wallet."""

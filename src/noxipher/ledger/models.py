@@ -4,6 +4,8 @@ Ledger models — mapping from @midnight-ntwrk/ledger-v8 TypeScript types.
 
 from __future__ import annotations
 
+from typing import Any
+
 from pydantic import BaseModel
 
 
@@ -20,8 +22,9 @@ class ZswapOffer(BaseModel):
       }
     """
 
-    inputs: list[dict] = []
-    outputs: list[dict] = []
+    inputs: list[dict[str, Any]] = []
+    outputs: list[dict[str, Any]] = []
+
     commitments: list[str] = []  # hex-encoded
     nullifiers: list[str] = []  # hex-encoded
 
@@ -29,7 +32,8 @@ class ZswapOffer(BaseModel):
 class ZswapInput(BaseModel):
     """Spend a shielded coin."""
 
-    coin_info: dict
+    coin_info: dict[str, Any]
+
     merkle_path: list[str]
 
 

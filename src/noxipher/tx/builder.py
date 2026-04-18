@@ -12,7 +12,8 @@ Flow (CONFIRMED from Counter CLI source, Apr 2026):
 """
 
 import asyncio
-from typing import TYPE_CHECKING
+from typing import Any, TYPE_CHECKING
+
 
 from noxipher.core.exceptions import TransactionError, TransactionTimeoutError
 
@@ -55,7 +56,7 @@ class TransactionBuilder:
         wallet: "MidnightWallet",
         contract_address: str,
         entry_point: str,
-        args: dict,
+        args: dict[str, Any],
     ) -> "TransactionReceipt":
         """Call a contract entry point."""
         unsigned_tx = {
@@ -73,7 +74,7 @@ class TransactionBuilder:
 
     async def _build_unshielded_transfer(
         self, wallet: "MidnightWallet", to_address: str, amount: int
-    ) -> dict:
+    ) -> dict[str, Any]:
         """
         Build unsigned unshielded transfer with UTXO selection.
         """
@@ -81,9 +82,10 @@ class TransactionBuilder:
 
         # 1. Decode recipient address to get 32-byte public key/address
         try:
-            recipient_bytes = decode_address(to_address)
+            _, _, recipient_bytes = decode_address(to_address)
         except Exception as e:
             raise TransactionError(f"Invalid recipient address: {e}") from e
+
 
         # 2. Fetch and select UTXOs
         utxos = await wallet.unshielded.get_utxos(self._client.indexer)
@@ -93,6 +95,7 @@ class TransactionBuilder:
             # Only use NIGHT tokens (all zeros)
             token_type = utxo.get("token_type", "00" * 32)
             if isinstance(token_type, dict):
+
                 token_type = token_type.get("hex", "00" * 32)
 
             if token_type == "00" * 32:
@@ -136,7 +139,7 @@ class TransactionBuilder:
             )
 
         # 5. Structure for SCALE serialization
-        # This dict matches the expected input of serialize_transaction in scale.py
+        # This dict[str, Any] matches the expected input of serialize_transaction in scale.py
         unshielded_offer = {
             "inputs": inputs,
             "outputs": outputs,
@@ -166,7 +169,7 @@ class TransactionBuilder:
 
     async def _build_shielded_transfer(
         self, wallet: "MidnightWallet", to: str, amount: int
-    ) -> dict:
+    ) -> dict[str, Any]:
         """Build unsigned shielded transfer."""
         return {
             "type": "shielded_transfer",
@@ -179,14 +182,14 @@ class TransactionBuilder:
             "fallible_hexes": [],
         }
 
-    async def _prove_transaction(self, tx: dict) -> dict:
+    async def _prove_transaction(self, tx: dict[str, Any]) -> dict[str, Any]:
         """Prove all segments via Proof Server HTTP API."""
         from noxipher.proof.prover import ZKProver
 
         prover = ZKProver(self._client.proof)
         return await prover.prove_transaction(tx)
 
-    def _serialize_transaction(self, tx_data: dict, wallet: "MidnightWallet") -> bytes:
+    def _serialize_transaction(self, tx_data: dict[str, Any], wallet: "MidnightWallet") -> bytes:
         """Serialize transaction to raw bytes with signing."""
         from noxipher.tx.scale import (
             MidnightTransactionSerializer,

@@ -1,6 +1,7 @@
 from enum import StrEnum
 
-from pydantic import AnyUrl, BaseModel, Field, HttpUrl
+from pydantic import BaseModel, Field
+
 
 
 class Network(StrEnum):
@@ -16,11 +17,12 @@ class Network(StrEnum):
 class NetworkConfig(BaseModel):
     name: str
     network: Network
-    node_ws_url: AnyUrl
-    indexer_ws_url: AnyUrl
-    indexer_http_url: HttpUrl
-    proof_server_url: HttpUrl
-    hosted_proof_server_url: HttpUrl | None = None
+    node_ws_url: str
+    indexer_ws_url: str
+    indexer_http_url: str
+    proof_server_url: str
+    hosted_proof_server_url: str | None = None
+
     coin_type: int = Field(default=877, description="SLIP-0044 Coin Type")
 
 

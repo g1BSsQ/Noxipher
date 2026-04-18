@@ -4,7 +4,10 @@ Indexer data models — Pydantic models for Midnight Indexer v4 responses.
 
 from __future__ import annotations
 
+from typing import Any
+
 from pydantic import BaseModel, field_validator
+
 
 
 class Block(BaseModel):
@@ -20,7 +23,7 @@ class TransactionResult(BaseModel):
     """Transaction execution result."""
 
     status: str  # "success", "PARTIAL_SUCCESS", "failure"
-    segments: list[dict] = []
+    segments: list[dict[str, Any]] = []
 
     @field_validator("status", mode="before")
     @classmethod
@@ -42,10 +45,10 @@ class Transaction(BaseModel):
     hash: str
     block: Block | None = None
     transaction_result: TransactionResult | None = None
-    fees: dict | None = None
+    fees: dict[str, Any] | None = None
     raw: str | None = None  # HexEncoded raw bytes
-    unshielded_created_outputs: list[dict] = []
-    unshielded_spent_outputs: list[dict] = []
+    unshielded_created_outputs: list[dict[str, Any]] = []
+    unshielded_spent_outputs: list[dict[str, Any]] = []
 
 
 class DustGenerationStatus(BaseModel):
@@ -54,4 +57,5 @@ class DustGenerationStatus(BaseModel):
     cardano_stake_key: str
     is_registered: bool
     available_dust: str  # Bigint as string (Specks)
-    registered_utxos: list[dict] = []
+    registered_utxos: list[dict[str, Any]] = []
+

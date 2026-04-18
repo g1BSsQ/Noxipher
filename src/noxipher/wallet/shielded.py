@@ -4,9 +4,10 @@ ShieldedWallet — Privacy-preserving shielded wallet using JubJub keys.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import Any, TYPE_CHECKING
 
 from noxipher.core.config import Network
+
 from noxipher.crypto.jubjub import ZswapSecretKeys
 
 if TYPE_CHECKING:
@@ -80,7 +81,8 @@ class ShieldedWallet:
         """Close shielded session."""
         await indexer.disconnect_wallet_session(session_id)
 
-    async def sync_coins(self, indexer: IndexerClient, session_id: str) -> list[dict]:
+    async def sync_coins(self, indexer: IndexerClient, session_id: str) -> list[dict[str, Any]]:
+
         """Stream shielded transactions, collect unspent coins."""
         coins = []
         async for event in indexer.subscribe_shielded_transactions(session_id):

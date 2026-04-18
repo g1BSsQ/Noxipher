@@ -2,9 +2,10 @@
 ZKProver — orchestrate ZK proof generation for Midnight transactions.
 """
 
-from __future__ import annotations
+from typing import Any, Union
 
 from noxipher.core.exceptions import ProofError
+
 from noxipher.proof.client import ProofServerClient
 from noxipher.tx.models import ProvenTransaction, UnsignedTransaction
 
@@ -15,29 +16,38 @@ class ZKProver:
     def __init__(self, proof_client: ProofServerClient) -> None:
         self._client = proof_client
 
-    async def prove_transaction(self, unsigned_tx: UnsignedTransaction) -> ProvenTransaction:
+    async def prove_transaction(
+        self, unsigned_tx: Union[UnsignedTransaction, dict[str, Any]]
+    ) -> ProvenTransaction:
         """
         Prove all ZK circuits in a transaction.
 
         Returns: ProvenTransaction with proof_hexes populated.
         """
+        # Convert dict to model if needed
+        if isinstance(unsigned_tx, dict):
+            tx = UnsignedTransaction.model_validate(unsigned_tx)
+        else:
+            tx = unsigned_tx
+
         # Verify proof server is running
         health = await self._client.health()
         if not health:
             raise ProofError("Proof Server is unreachable")
 
         # Collect circuits that need proving
-        circuits = unsigned_tx.circuits
+        circuits = tx.circuits
         if not circuits:
             # No ZK proofs needed (simple NIGHT transfer or already proven)
             return ProvenTransaction(
-                type=unsigned_tx.type,
-                guaranteed_hex=unsigned_tx.guaranteed_hex,
-                fallible_hexes=unsigned_tx.fallible_hexes,
+                type=tx.type,
+                guaranteed_hex=tx.guaranteed_hex,
+                fallible_hexes=tx.fallible_hexes,
                 proof_hexes=[],
-                requires_unshielded_signature=unsigned_tx.requires_unshielded_signature,
-                signing_payload_hex=unsigned_tx.signing_payload_hex,
+                requires_unshielded_signature=tx.requires_unshielded_signature,
+                signing_payload_hex=tx.signing_payload_hex,
             )
+
 
         proof_hexes = []
         for circuit in circuits:
@@ -55,10 +65,11 @@ class ZKProver:
             proof_hexes.append(proof_bytes.hex())
 
         return ProvenTransaction(
-            type=unsigned_tx.type,
-            guaranteed_hex=unsigned_tx.guaranteed_hex,
-            fallible_hexes=unsigned_tx.fallible_hexes,
+            type=tx.type,
+            guaranteed_hex=tx.guaranteed_hex,
+            fallible_hexes=tx.fallible_hexes,
             proof_hexes=proof_hexes,
-            requires_unshielded_signature=unsigned_tx.requires_unshielded_signature,
-            signing_payload_hex=unsigned_tx.signing_payload_hex,
+            requires_unshielded_signature=tx.requires_unshielded_signature,
+            signing_payload_hex=tx.signing_payload_hex,
         )
+

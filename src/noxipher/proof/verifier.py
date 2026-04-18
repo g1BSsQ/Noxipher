@@ -1,14 +1,11 @@
-"""
-ProofVerifier — verify ZK proofs locally.
-
-⚠️ PLACEHOLDER: Actual verification requires ZK circuit integration.
-"""
+from typing import Any
 
 
 class ProofVerifier:
     """Verify ZK proofs."""
 
-    async def verify(self, proof_bytes: bytes, public_inputs: dict) -> bool:
+    async def verify(self, proof_bytes: bytes, public_inputs: dict[str, Any]) -> bool:
+
         """
         Verify a ZK proof.
 

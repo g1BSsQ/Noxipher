@@ -4,9 +4,10 @@ UnshieldedWallet — NIGHT token wallet with sr25519 signing.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import Any, TYPE_CHECKING
 
 from noxipher.core.config import Network
+
 from noxipher.crypto.keys import Sr25519Signer
 
 if TYPE_CHECKING:
@@ -49,7 +50,8 @@ class UnshieldedWallet:
         """Get substrate-interface Keypair."""
         return self._signer.as_substrate_keypair()
 
-    async def get_utxos(self, indexer: IndexerClient) -> list[dict]:
+    async def get_utxos(self, indexer: IndexerClient) -> list[dict[str, Any]]:
+
         """
         Get UTxO set from Indexer using optimized query.
         """

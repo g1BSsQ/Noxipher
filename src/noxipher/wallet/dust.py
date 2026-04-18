@@ -8,7 +8,8 @@ DUST is generated automatically from NIGHT UTxOs (after registering on-chain).
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Never
+from typing import Any, TYPE_CHECKING, Never
+
 
 from noxipher.core.config import Network
 from noxipher.core.exceptions import WalletError
@@ -88,7 +89,8 @@ class DustWallet:
 
     async def register_night_utxos(
         self,
-        utxos: list[dict],
+        utxos: list[dict[str, Any]],
+
         tx_builder: TransactionBuilder,
         unshielded_wallet: UnshieldedWallet,
     ) -> str:

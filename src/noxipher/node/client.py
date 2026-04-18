@@ -92,25 +92,34 @@ class NodeClient:
     # Standard Substrate RPC methods
     # ─────────────────────────────────────────────────────────────
 
+    async def get_health(self) -> dict[str, Any] | None:
+        """Get node health (chain name). Returns None if unreachable."""
+        try:
+            name = await self.get_chain_name()
+            return {"chain": name, "status": "ok"}
+        except Exception:
+            return None
+
     async def get_chain_name(self) -> str:
+
         """Verify connected to correct chain (e.g., 'Midnight Devnet')."""
         self._require_connection()
         result = await asyncio.to_thread(
             self._substrate.rpc_request,
             "system_chain",
-            [],  # type: ignore[union-attr]
+            [],
         )
-        return result.get("result", "")
+        return str(result.get("result", ""))
 
-    async def get_runtime_version(self) -> dict:
+    async def get_runtime_version(self) -> dict[str, Any]:
         """Get runtime version info including spec_version."""
         self._require_connection()
         result = await asyncio.to_thread(
             self._substrate.rpc_request,
             "state_getRuntimeVersion",
-            [],  # type: ignore[union-attr]
+            [],
         )
-        return result.get("result", {})
+        return dict(result.get("result", {}))
 
     async def get_block_hash(self, height: int | None = None) -> str:
         """Get block hash at height. None = latest finalized block."""
@@ -119,20 +128,20 @@ class NodeClient:
         result = await asyncio.to_thread(
             self._substrate.rpc_request,
             "chain_getBlockHash",
-            params,  # type: ignore[union-attr]
+            params,
         )
-        return result.get("result", "")
+        return str(result.get("result", ""))
 
-    async def get_block(self, block_hash: str | None = None) -> dict:
+    async def get_block(self, block_hash: str | None = None) -> dict[str, Any]:
         """Get full block by hash. None = latest."""
         self._require_connection()
         params = [block_hash] if block_hash else []
         result = await asyncio.to_thread(
             self._substrate.rpc_request,
             "chain_getBlock",
-            params,  # type: ignore[union-attr]
+            params,
         )
-        return result.get("result", {})
+        return dict(result.get("result", {}))
 
     async def get_finalized_head(self) -> str:
         """Get the hash of the latest finalized block."""
@@ -140,20 +149,21 @@ class NodeClient:
         result = await asyncio.to_thread(
             self._substrate.rpc_request,
             "chain_getFinalizedHead",
-            [],  # type: ignore[union-attr]
+            [],
         )
-        return result.get("result", "")
+        return str(result.get("result", ""))
 
-    async def get_header(self, block_hash: str | None = None) -> dict:
+    async def get_header(self, block_hash: str | None = None) -> dict[str, Any]:
         """Get block header."""
         self._require_connection()
         params = [block_hash] if block_hash else []
         result = await asyncio.to_thread(
             self._substrate.rpc_request,
             "chain_getHeader",
-            params,  # type: ignore[union-attr]
+            params,
         )
-        return result.get("result", {})
+        return dict(result.get("result", {}))
+
 
     async def submit_extrinsic(self, raw_tx_bytes: bytes) -> str:
         """
@@ -171,7 +181,7 @@ class NodeClient:
         logger.debug(f"Submitting extrinsic: {len(raw_tx_bytes)} bytes")
         try:
             result = await asyncio.to_thread(
-                self._substrate.rpc_request,  # type: ignore[union-attr]
+                self._substrate.rpc_request,
                 "author_submitExtrinsic",
                 [hex_tx],
             )
@@ -180,7 +190,7 @@ class NodeClient:
 
         if "error" in result:
             raise TransactionError(f"Node rejected tx: {result['error']}")
-        tx_hash = result.get("result", "")
+        tx_hash = str(result.get("result", ""))
         logger.info(f"Transaction submitted: {tx_hash}")
         return tx_hash
 
@@ -193,7 +203,7 @@ class NodeClient:
         hex_tx = "0x" + raw_tx_bytes.hex()
         try:
             result = await asyncio.to_thread(
-                self._substrate.rpc_request,  # type: ignore[union-attr]
+                self._substrate.rpc_request,
                 "author_submitAndWatchExtrinsic",
                 [hex_tx],
             )
@@ -202,7 +212,7 @@ class NodeClient:
 
         if "error" in result:
             raise TransactionError(f"Node rejected tx: {result['error']}")
-        return result.get("result", "")
+        return str(result.get("result", ""))
 
     # ─────────────────────────────────────────────────────────────
     # Midnight custom RPC methods
@@ -218,11 +228,11 @@ class NodeClient:
         self._require_connection()
         params = [block_hash] if block_hash else [None]
         result = await asyncio.to_thread(
-            self._substrate.rpc_request,  # type: ignore[union-attr]
+            self._substrate.rpc_request,
             "midnight_ledgerVersion",
             params,
         )
-        return result.get("result", "")
+        return str(result.get("result", ""))
 
     async def get_api_versions(self) -> list[int]:
         """
@@ -233,11 +243,12 @@ class NodeClient:
         """
         self._require_connection()
         result = await asyncio.to_thread(
-            self._substrate.rpc_request,  # type: ignore[union-attr]
+            self._substrate.rpc_request,
             "midnight_apiVersions",
             [],
         )
-        return result.get("result", [])
+        return list(result.get("result", []))
+
 
     async def get_contract_state(
         self, contract_address_hex: str, block_hash: str | None = None
@@ -257,11 +268,11 @@ class NodeClient:
         self._require_connection()
         params = [contract_address_hex, block_hash if block_hash else None]
         result = await asyncio.to_thread(
-            self._substrate.rpc_request,  # type: ignore[union-attr]
+            self._substrate.rpc_request,
             "midnight_contractState",
             params,
         )
-        return result.get("result", "")
+        return str(result.get("result", ""))
 
     async def get_contract_state_bytes(
         self, contract_address_hex: str, block_hash: str | None = None
@@ -282,7 +293,7 @@ class NodeClient:
         self._require_connection()
         params = [block_hash if block_hash else None]
         result = await asyncio.to_thread(
-            self._substrate.rpc_request,  # type: ignore[union-attr]
+            self._substrate.rpc_request,
             "midnight_zswapStateRoot",
             params,
         )
@@ -301,7 +312,7 @@ class NodeClient:
         self._require_connection()
         params = [block_hash if block_hash else None]
         result = await asyncio.to_thread(
-            self._substrate.rpc_request,  # type: ignore[union-attr]
+            self._substrate.rpc_request,
             "midnight_ledgerStateRoot",
             params,
         )
@@ -317,9 +328,7 @@ class NodeClient:
     async def get_metadata_types(self) -> list[str]:
         """Dump Midnight runtime type registry for debugging."""
         self._require_connection()
-        types = await asyncio.to_thread(
-            self._substrate.get_metadata_types  # type: ignore[union-attr]
-        )
+        types = await asyncio.to_thread(self._substrate.get_metadata_types)
         return [str(t) for t in types]
 
     async def get_pallet_call_index(self, pallet_name: str, call_name: str) -> tuple[int, int]:
@@ -331,14 +340,15 @@ class NodeClient:
         """
         self._require_connection()
         try:
-            metadata = await asyncio.to_thread(self._substrate.get_metadata)  # type: ignore[union-attr]
+            metadata = await asyncio.to_thread(self._substrate.get_metadata)
             for pallet in metadata.value["pallets"]:
                 if pallet["name"] == pallet_name:
                     pallet_idx = pallet["index"]
                     if pallet.get("calls"):
                         for call in pallet["calls"]["calls"]:
                             if call["name"] == call_name:
-                                return pallet_idx, call["index"]
+                                return pallet_idx, int(call["index"])
             raise ValueError(f"Cannot find {pallet_name}.{call_name} in metadata")
         except Exception as e:
             raise ConnectionError(f"Failed to get pallet call index: {e}") from e
+

@@ -52,7 +52,8 @@ class IndexerClient:
     async def get_block(self, height: int | None = None, hash_hex: str | None = None) -> Block:
         """Get block by height or hash. Default: latest block."""
         try:
-            result = await self._http_client.execute_async(  # type: ignore[union-attr]
+            result = await self._http_client.execute_async(
+
                 gql(GET_BLOCK),
                 variable_values={"height": height, "hash": hash_hex},
             )
@@ -69,7 +70,8 @@ class IndexerClient:
     ) -> list[Transaction]:
         """Get transactions by hash or address."""
         try:
-            result = await self._http_client.execute_async(  # type: ignore[union-attr]
+            result = await self._http_client.execute_async(
+
                 gql(GET_TRANSACTIONS),
                 variable_values={"hash": hash, "address": address, "limit": limit},
             )
@@ -90,7 +92,8 @@ class IndexerClient:
             }
         """)
         try:
-            result = await self._http_client.execute_async(  # type: ignore[union-attr]
+            result = await self._http_client.execute_async(
+
                 mutation,
                 variable_values={"viewingKey": viewing_key},
             )
@@ -106,7 +109,8 @@ class IndexerClient:
             }
         """)
         try:
-            await self._http_client.execute_async(  # type: ignore[union-attr]
+            await self._http_client.execute_async(
+
                 mutation,
                 variable_values={"sessionId": session_id},
             )
@@ -137,7 +141,8 @@ class IndexerClient:
 
     async def get_dust_status(self, cardano_stake_keys: list[str]) -> list[DustGenerationStatus]:
         """Query DUST generation status for Cardano stake keys."""
-        result = await self._http_client.execute_async(  # type: ignore[union-attr]
+        result = await self._http_client.execute_async(
+
             gql(GET_DUST_STATUS),
             variable_values={"stakeKeys": cardano_stake_keys},
         )
@@ -147,7 +152,8 @@ class IndexerClient:
     async def get_utxos(self, address: str) -> list[dict[str, Any]]:
         """Get unshielded UTXOs for an address."""
         try:
-            result = await self._http_client.execute_async(  # type: ignore[union-attr]
+            result = await self._http_client.execute_async(
+
                 gql(GET_UTXOS),
                 variable_values={"address": address},
             )

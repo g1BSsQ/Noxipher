@@ -1,12 +1,15 @@
 """ZSwap offer types."""
 
+from typing import Any
+
 from pydantic import BaseModel
 
 
 class ZswapInput(BaseModel):
     """Input for ZSwap offer — spend a shielded coin."""
 
-    coin_info: dict
+    coin_info: dict[str, Any]
+
     merkle_path: list[str]
 
 

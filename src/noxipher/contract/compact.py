@@ -12,7 +12,10 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from typing import Any
+
 from pydantic import BaseModel
+
 
 from noxipher.core.exceptions import ContractError
 
@@ -35,7 +38,8 @@ class ContractABI(BaseModel):
 
     name: str
     version: str | None = None
-    circuits: list[dict] = []
+    circuits: list[dict[str, Any]] = []
+
     entry_points: list[ContractEntryPoint] = []
 
     @classmethod
