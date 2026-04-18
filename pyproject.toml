@@ -1,0 +1,80 @@
+[project]
+name = "noxipher"
+version = "0.1.0"
+description = "Python SDK for Midnight blockchain — Privacy-first, async-first"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [
+    { name = "g1BSsQ", email = "hungboycl@gmail.com" }
+]
+keywords = ["midnight", "blockchain", "zk-proofs", "privacy", "sdk"]
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Framework :: AsyncIO",
+    "Typing :: Typed",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
+dependencies = [
+    "aiofiles>=25.1.0",
+    "anyio>=4.0.0",
+    "argon2-cffi>=23.1.0",
+    "bech32>=1.2.0",
+    "bip-utils>=2.9.0",
+    "cryptography>=42.0.0",
+    "gql[aiohttp,websockets]>=3.5.0",
+    "httpx>=0.27.0",
+    "mnemonic>=0.21",
+    "py_ecc>=6.0.0",
+    "pydantic>=2.0.0",
+    "python-dotenv>=1.0.0",
+    "structlog>=24.0.0",
+    "tenacity>=8.2.0",
+    "websockets>=12.0",
+]
+
+[project.optional-dependencies]
+# Rust-based packages (require Rust toolchain to build from source)
+node = [
+    "py-sr25519-bindings>=0.2.0",
+    "substrate-interface>=1.7.0",
+]
+
+[project.urls]
+Homepage     = "https://github.com/g1BSsQ/Noxipher"
+Docs         = "https://noxipher.readthedocs.io"
+Changelog    = "https://github.com/g1BSsQ/Noxipher/blob/main/CHANGELOG.md"
+
+
+[build-system]
+requires      = ["hatchling"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "mkdocs-material>=9.5.0",
+    "mkdocstrings[python]>=0.24.0",
+    "mypy>=1.8.0",
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.0",
+    "pytest-cov>=4.1.0",
+    "respx>=0.21.0",
+    "ruff>=0.3.0",
+]
+
+[tool.mypy]
+strict            = true
+python_version    = "3.11"
+ignore_missing_imports = true
+
+[tool.ruff]
+line-length = 99
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "ANN", "B"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths    = ["tests"]
