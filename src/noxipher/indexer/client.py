@@ -59,7 +59,7 @@ class IndexerClient:
                 gql(GET_BLOCK),
                 variable_values={"height": height, "hash": hash_hex},
             )
-            return Block.model_validate(cast(dict[str, Any], result)["block"])
+            return Block.model_validate(result["block"])
 
         except Exception as e:
             raise IndexerError(f"get_block failed: {e}") from e
@@ -78,7 +78,7 @@ class IndexerClient:
                 gql(GET_TRANSACTIONS),
                 variable_values={"hash": hash, "address": address, "limit": limit},
             )
-            data = cast(dict[str, Any], result)
+            data = result
             return [Transaction.model_validate(tx) for tx in data["transactions"]["nodes"]]
 
         except Exception as e:
@@ -102,7 +102,7 @@ class IndexerClient:
                 mutation,
                 variable_values={"viewingKey": viewing_key},
             )
-            return cast(str, cast(dict[str, Any], result)["connect"])
+            return cast(str, result["connect"])
 
         except Exception as e:
             raise IndexerError(f"connect_wallet_session failed: {e}") from e
@@ -153,7 +153,7 @@ class IndexerClient:
             gql(GET_DUST_STATUS),
             variable_values={"stakeKeys": cardano_stake_keys},
         )
-        data = cast(dict[str, Any], result)
+        data = result
         return [DustGenerationStatus.model_validate(d) for d in data["dustStatus"]]
 
 
@@ -166,7 +166,7 @@ class IndexerClient:
                 gql(GET_UTXOS),
                 variable_values={"address": address},
             )
-            data = cast(dict[str, Any], result)
+            data = result
             return cast(list[dict[str, Any]], data["unshieldedUtxos"]["nodes"])
 
 
