@@ -3,8 +3,8 @@ from enum import StrEnum
 from pydantic import BaseModel, Field
 
 
-
 class Network(StrEnum):
+
     MAINNET = "mainnet"
     TESTNET = "testnet"
     PREPROD = "preprod"

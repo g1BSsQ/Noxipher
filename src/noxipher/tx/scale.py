@@ -26,8 +26,8 @@ from __future__ import annotations
 
 from typing import Any
 
-
 SCALE_MAX_BYTES = 67
+
 SCALE_ONE_BYTE_MARKER = 0b00
 SCALE_TWO_BYTE_MARKER = 0b01
 SCALE_FOUR_BYTE_MARKER = 0b10

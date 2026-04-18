@@ -4,15 +4,14 @@ Keystore — Argon2id + AES-256-GCM encrypted key storage.
 
 from __future__ import annotations
 
-from typing import Any
-
-
 import json
 import secrets
 from pathlib import Path
+from typing import Any
 
 from argon2.low_level import Type, hash_secret_raw
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+
 
 # Argon2id parameters for key derivation
 ARGON2_TIME_COST = 3

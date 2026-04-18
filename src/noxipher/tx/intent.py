@@ -4,8 +4,8 @@ from typing import Any
 
 from pydantic import BaseModel
 
-
 from noxipher.tx.offer import ZswapOffer
+
 
 
 class ContractCallPrototype(BaseModel):

@@ -2,10 +2,9 @@
 ZKProver — orchestrate ZK proof generation for Midnight transactions.
 """
 
-from typing import Any, Union
+from typing import Any
 
 from noxipher.core.exceptions import ProofError
-
 from noxipher.proof.client import ProofServerClient
 from noxipher.tx.models import ProvenTransaction, UnsignedTransaction
 
@@ -17,8 +16,9 @@ class ZKProver:
         self._client = proof_client
 
     async def prove_transaction(
-        self, unsigned_tx: Union[UnsignedTransaction, dict[str, Any]]
+        self, unsigned_tx: UnsignedTransaction | dict[str, Any]
     ) -> ProvenTransaction:
+
         """
         Prove all ZK circuits in a transaction.
 
