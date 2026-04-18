@@ -4,11 +4,10 @@ ShieldedWallet — Privacy-preserving shielded wallet using JubJub keys.
 
 from __future__ import annotations
 
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from noxipher.core.config import Network
 from noxipher.crypto.jubjub import ZswapSecretKeys
-
 
 if TYPE_CHECKING:
     from noxipher.indexer.client import IndexerClient

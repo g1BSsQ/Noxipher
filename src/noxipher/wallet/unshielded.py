@@ -4,11 +4,10 @@ UnshieldedWallet — NIGHT token wallet with sr25519 signing.
 
 from __future__ import annotations
 
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from noxipher.core.config import Network
 from noxipher.crypto.keys import Sr25519Signer
-
 
 if TYPE_CHECKING:
     from noxipher.indexer.client import IndexerClient

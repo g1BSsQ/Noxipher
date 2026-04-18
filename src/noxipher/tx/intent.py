@@ -7,7 +7,6 @@ from pydantic import BaseModel
 from noxipher.tx.offer import ZswapOffer
 
 
-
 class ContractCallPrototype(BaseModel):
     """Prototype for a contract call."""
 

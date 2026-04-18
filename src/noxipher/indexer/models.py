@@ -3,8 +3,11 @@ Indexer data models — Pydantic models for Midnight Indexer v4 responses.
 """
 
 from __future__ import annotations
+
 from typing import Any
+
 from pydantic import BaseModel, field_validator
+
 
 class Block(BaseModel):
     """Block data from Indexer."""

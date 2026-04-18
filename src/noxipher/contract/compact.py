@@ -18,7 +18,6 @@ from pydantic import BaseModel
 from noxipher.core.exceptions import ContractError
 
 
-
 class ContractEntryPoint(BaseModel):
     """Contract entry point (function)."""
 
