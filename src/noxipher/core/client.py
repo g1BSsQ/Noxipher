@@ -73,7 +73,8 @@ class NoxipherClient:
         except Exception:
             indexer_ok = False
 
-        status = HealthStatus.OK if (node_health and indexer_ok) else HealthStatus.ERROR
+        status = HealthStatus.OK if (node_health and indexer_ok) else HealthStatus.DOWN
+
 
         return ServiceHealth(
             status=status,

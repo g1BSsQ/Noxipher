@@ -186,7 +186,9 @@ class TransactionBuilder:
         from noxipher.proof.prover import ZKProver
 
         prover = ZKProver(self._client.proof)
-        return await prover.prove_transaction(tx)
+        proven = await prover.prove_transaction(tx)
+        return proven.model_dump()
+
 
     def _serialize_transaction(self, tx_data: dict[str, Any], wallet: "MidnightWallet") -> bytes:
         """Serialize transaction to raw bytes with signing."""
@@ -229,17 +231,19 @@ class TransactionBuilder:
         while asyncio.get_event_loop().time() < deadline:
             try:
                 txs = await self._client.indexer.get_transactions(hash=tx_hash)
-                if txs and txs[0].transaction_result:
+                if txs:
                     tx = txs[0]
-                    from noxipher.tx.models import TransactionReceipt
+                    if tx.transaction_result:
+                        from noxipher.tx.models import TransactionReceipt
 
-                    return TransactionReceipt(
-                        hash=tx.hash,
-                        block_height=tx.block.height if tx.block else None,
-                        block_hash=tx.block.hash if tx.block else None,
-                        status=tx.transaction_result.status,
-                        fee_paid=(int(tx.fees.get("paid_fees", 0)) if tx.fees else 0),
-                    )
+                        return TransactionReceipt(
+                            hash=tx.hash,
+                            block_height=tx.block.height if tx.block else None,
+                            block_hash=tx.block.hash if tx.block else None,
+                            status=tx.transaction_result.status,
+                            fee_paid=(int(tx.fees.get("paid_fees", 0)) if tx.fees else 0),
+                        )
+
             except Exception:
                 pass
             await asyncio.sleep(2)

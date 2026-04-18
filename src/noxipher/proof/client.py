@@ -12,6 +12,8 @@ Proof Server API:
 
 from __future__ import annotations
 
+from typing import Any, cast
+
 import httpx
 from tenacity import retry, stop_after_attempt, wait_exponential
 
@@ -40,16 +42,17 @@ class ProofServerClient:
         if self._client:
             await self._client.aclose()
 
-    async def health(self) -> dict:
+    async def health(self) -> dict[str, Any]:
         """
         GET /health → {"status": "ok", "version": "8.0.3", ...}
 
         Verify proof server is running and version is correct.
         """
+        assert self._client is not None
         try:
-            resp = await self._client.get(f"{self._url}/health")  # type: ignore[union-attr]
+            resp = await self._client.get(f"{self._url}/health")
             resp.raise_for_status()
-            return resp.json()
+            return cast(dict[str, Any], resp.json())
         except httpx.HTTPError as e:
             raise ProofError(f"Proof server health check failed: {e}") from e
 
@@ -58,14 +61,15 @@ class ProofServerClient:
         self,
         circuit_id: str,
         proving_key: bytes,
-        private_inputs: dict,
-        public_inputs: dict,
+        private_inputs: dict[str, Any],
+        public_inputs: dict[str, Any],
     ) -> bytes:
         """
         POST /prove → ZK proof bytes.
 
         ⚠️ REQUEST FORMAT NOT YET VERIFIED.
         """
+        assert self._client is not None
         payload = {
             "circuitId": circuit_id,
             "provingKey": proving_key.hex(),
@@ -73,7 +77,7 @@ class ProofServerClient:
             "publicInputs": public_inputs,
         }
         try:
-            resp = await self._client.post(f"{self._url}/prove", json=payload)  # type: ignore[union-attr]
+            resp = await self._client.post(f"{self._url}/prove", json=payload)
             resp.raise_for_status()
             return resp.content
         except httpx.HTTPError as e:
@@ -81,9 +85,11 @@ class ProofServerClient:
 
     async def get_proving_key(self, circuit_id: str) -> bytes:
         """GET /keys/{circuit_id} → Proving key bytes."""
+        assert self._client is not None
         try:
-            resp = await self._client.get(f"{self._url}/keys/{circuit_id}")  # type: ignore[union-attr]
+            resp = await self._client.get(f"{self._url}/keys/{circuit_id}")
             resp.raise_for_status()
             return resp.content
         except httpx.HTTPError as e:
             raise ProofError(f"Failed to get proving key for {circuit_id}: {e}") from e
+

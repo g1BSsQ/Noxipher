@@ -4,7 +4,7 @@ ContractInstance — deployed contract interaction.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from noxipher.contract.compact import CompactContract
 from noxipher.core.exceptions import ContractError
@@ -12,6 +12,7 @@ from noxipher.core.exceptions import ContractError
 if TYPE_CHECKING:
     from noxipher.core.client import NoxipherClient
     from noxipher.wallet.wallet import MidnightWallet
+
 
 
 class ContractInstance:
@@ -38,9 +39,10 @@ class ContractInstance:
     async def call(
         self,
         entry_point: str,
-        args: dict | None = None,
+        args: dict[str, Any] | None = None,
         wallet: MidnightWallet | None = None,
-    ) -> dict:
+    ) -> dict[str, Any]:
+
         """
         Call contract entry point.
 
@@ -61,12 +63,17 @@ class ContractInstance:
         else:
             return await self._call_pure(entry_point, args or {})
 
-    async def _call_pure(self, entry_point: str, args: dict) -> dict:
+    async def _call_pure(self, entry_point: str, args: dict[str, Any]) -> dict[str, Any]:
+
         """Query contract state (no transaction)."""
         state = await self._client.indexer.get_transactions(address=self._address, limit=1)
         return {"result": state, "tx_hash": None}
 
-    async def _call_impure(self, entry_point: str, args: dict, wallet: MidnightWallet) -> dict:
+    async def _call_impure(
+        self, entry_point: str, args: dict[str, Any], wallet: MidnightWallet
+    ) -> dict[str, Any]:
+
+
         """Call impure entry point → transaction."""
         tx_receipt = await self._client.tx.call_contract(
             wallet=wallet,

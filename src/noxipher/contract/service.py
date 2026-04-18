@@ -5,7 +5,7 @@ ContractService — deploy and manage Compact contracts.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from noxipher.contract.compact import CompactContract
 from noxipher.contract.instance import ContractInstance
@@ -13,6 +13,7 @@ from noxipher.contract.instance import ContractInstance
 if TYPE_CHECKING:
     from noxipher.core.client import NoxipherClient
     from noxipher.wallet.wallet import MidnightWallet
+
 
 
 class ContractService:
@@ -29,7 +30,8 @@ class ContractService:
         self,
         contract: CompactContract,
         wallet: MidnightWallet,
-        initial_state: dict | None = None,
+        initial_state: dict[str, Any] | None = None,
+
     ) -> ContractInstance:
         """
         Deploy a contract to the network.

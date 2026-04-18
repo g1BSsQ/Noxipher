@@ -7,7 +7,7 @@ from __future__ import annotations
 import json
 import secrets
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from argon2.low_level import Type, hash_secret_raw
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
@@ -103,4 +103,6 @@ class Keystore:
     @staticmethod
     def load(path: Path) -> dict[str, Any]:
         """Load keystore from file."""
-        return json.loads(path.read_text())
+        return cast(dict[str, Any], json.loads(path.read_text()))
+
+

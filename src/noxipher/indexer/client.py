@@ -9,7 +9,7 @@ Indexer v4 endpoints (confirmed Apr 2026):
 from __future__ import annotations
 
 from collections.abc import AsyncIterator
-from typing import Any
+from typing import Any, cast
 
 from gql import Client, gql
 from gql.transport.aiohttp import AIOHTTPTransport
@@ -41,23 +41,26 @@ class IndexerClient:
     async def __aenter__(self) -> IndexerClient:
         transport = AIOHTTPTransport(url=self._http_url)
         self._http_client = Client(transport=transport, fetch_schema_from_transport=False)
-        await self._http_client.__aenter__()
+        await self._http_client.__aenter__()  # type: ignore[no-untyped-call]
         return self
+
 
     async def __aexit__(self, *args: object) -> None:
         if self._http_client:
-            await self._http_client.__aexit__(*args)
+            await self._http_client.__aexit__(*args)  # type: ignore[no-untyped-call]
+
 
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(min=1, max=10))
     async def get_block(self, height: int | None = None, hash_hex: str | None = None) -> Block:
         """Get block by height or hash. Default: latest block."""
+        assert self._http_client is not None
         try:
             result = await self._http_client.execute_async(
-
                 gql(GET_BLOCK),
                 variable_values={"height": height, "hash": hash_hex},
             )
-            return Block.model_validate(result["block"])
+            return Block.model_validate(cast(dict[str, Any], result)["block"])
+
         except Exception as e:
             raise IndexerError(f"get_block failed: {e}") from e
 
@@ -69,13 +72,15 @@ class IndexerClient:
         limit: int = 10,
     ) -> list[Transaction]:
         """Get transactions by hash or address."""
+        assert self._http_client is not None
         try:
             result = await self._http_client.execute_async(
-
                 gql(GET_TRANSACTIONS),
                 variable_values={"hash": hash, "address": address, "limit": limit},
             )
-            return [Transaction.model_validate(tx) for tx in result["transactions"]["nodes"]]
+            data = cast(dict[str, Any], result)
+            return [Transaction.model_validate(tx) for tx in data["transactions"]["nodes"]]
+
         except Exception as e:
             raise IndexerError(f"get_transactions failed: {e}") from e
 
@@ -91,13 +96,14 @@ class IndexerClient:
                 connect(viewingKey: $viewingKey)
             }
         """)
+        assert self._http_client is not None
         try:
             result = await self._http_client.execute_async(
-
                 mutation,
                 variable_values={"viewingKey": viewing_key},
             )
-            return result["connect"]
+            return cast(str, cast(dict[str, Any], result)["connect"])
+
         except Exception as e:
             raise IndexerError(f"connect_wallet_session failed: {e}") from e
 
@@ -108,12 +114,13 @@ class IndexerClient:
                 disconnect(sessionId: $sessionId)
             }
         """)
+        assert self._http_client is not None
         try:
             await self._http_client.execute_async(
-
                 mutation,
                 variable_values={"sessionId": session_id},
             )
+
         except Exception as e:
             raise IndexerError(f"disconnect_wallet_session failed: {e}") from e
 
@@ -141,22 +148,27 @@ class IndexerClient:
 
     async def get_dust_status(self, cardano_stake_keys: list[str]) -> list[DustGenerationStatus]:
         """Query DUST generation status for Cardano stake keys."""
+        assert self._http_client is not None
         result = await self._http_client.execute_async(
-
             gql(GET_DUST_STATUS),
             variable_values={"stakeKeys": cardano_stake_keys},
         )
-        return [DustGenerationStatus.model_validate(d) for d in result["dustStatus"]]
+        data = cast(dict[str, Any], result)
+        return [DustGenerationStatus.model_validate(d) for d in data["dustStatus"]]
+
 
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(min=1, max=10))
     async def get_utxos(self, address: str) -> list[dict[str, Any]]:
         """Get unshielded UTXOs for an address."""
+        assert self._http_client is not None
         try:
             result = await self._http_client.execute_async(
-
                 gql(GET_UTXOS),
                 variable_values={"address": address},
             )
-            return result["unshieldedUtxos"]["nodes"]
+            data = cast(dict[str, Any], result)
+            return cast(list[dict[str, Any]], data["unshieldedUtxos"]["nodes"])
+
+
         except Exception as e:
             raise IndexerError(f"get_utxos failed: {e}") from e

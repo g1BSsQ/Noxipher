@@ -10,10 +10,11 @@ Fixtures:
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from noxipher.wallet.wallet import MidnightWallet
+
 
 import httpx
 import respx
@@ -68,7 +69,8 @@ class MockIndexerResponses:
     """Preset GraphQL responses for testing."""
 
     @staticmethod
-    def empty_block(height: int = 1) -> dict:
+    def empty_block(height: int = 1) -> dict[str, Any]:
+
         """Empty block response."""
         return {
             "block": {
@@ -80,12 +82,14 @@ class MockIndexerResponses:
         }
 
     @staticmethod
-    def empty_transaction_list() -> dict:
+    def empty_transaction_list() -> dict[str, Any]:
+
         """Empty transaction list."""
         return {"transactions": {"nodes": []}}
 
     @staticmethod
-    def transaction_finalized(tx_hash: str) -> dict:
+    def transaction_finalized(tx_hash: str) -> dict[str, Any]:
+
         """Finalized transaction response."""
         return {
             "transactions": {
