@@ -223,18 +223,22 @@ class TransactionBuilder:
             "signatures": [],  # Will be filled by signer
         }
 
+        # Bug 3 Fix: Real randomness and commitment for all unshielded envelopes
+        rnd = secrets.token_bytes(32)
+        from noxipher.crypto.jubjub import compute_binding_commitment
+
         intent = {
             "guaranteed_unshielded_offer": unshielded_offer,
             "ttl": ttl,
             "actions": [],
-            "binding_commitment": b"\x00" * 32,
+            "binding_commitment": compute_binding_commitment(rnd),
         }
 
         # The StandardTransaction envelope
         stx = {
             "network_id": self._client.config.name,
             "intents": {"0": intent},
-            "binding_randomness": b"\x00" * 32,
+            "binding_randomness": rnd,
         }
 
         return {
@@ -505,10 +509,11 @@ class TransactionBuilder:
             }
             tx_data["standard"]["intents"]["0"]["shielded_offer"] = offer
 
-            # Bug 3 Fix: Ensure commitment matches randomness
-            rnd = tx_data["standard"]["binding_randomness"]
-            tx_data["standard"]["intents"]["0"]["binding_commitment"] = compute_binding_commitment(
-                rnd
+            # Bug 3 Fix: Regenerate fresh randomness for shielded transfers
+            rnd = secrets.token_bytes(32)
+            tx_data["standard"]["binding_randomness"] = rnd
+            tx_data["standard"]["intents"]["0"]["binding_commitment"] = (
+                compute_binding_commitment(rnd)
             )
         elif tx_data.get("type") == "unshielded_transfer" and "standard" not in tx_data:
             # Should not happen with new orchestration
