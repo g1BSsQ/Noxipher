@@ -48,6 +48,7 @@ class Transaction(BaseModel):
     raw: str | None = None  # HexEncoded raw bytes
     unshielded_created_outputs: list[dict[str, Any]] = []
     unshielded_spent_outputs: list[dict[str, Any]] = []
+    events: list[dict[str, Any]] = []
 
 
 class DustGenerationStatus(BaseModel):

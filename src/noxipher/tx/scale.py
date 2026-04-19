@@ -495,10 +495,9 @@ def serialize_contract_args(args: object) -> bytes:
             buf.extend(serialize_contract_args(item))
         return bytes(buf)
     if isinstance(args, dict):
-        # For dicts/structs, we use insertion order to match Compact declaration order
-        buf = bytearray(encode_scale_int(len(args)))
-        for k, v in args.items():
-            buf.extend(serialize_contract_args(k))
+        # SCALE Struct: Concatenate values in order without length or keys
+        buf = bytearray()
+        for v in args.values():
             buf.extend(serialize_contract_args(v))
         return bytes(buf)
 

@@ -47,7 +47,9 @@ class WalletSyncer:
     async def sync_all(self) -> dict[str, Any]:
         """Sync all wallet components."""
         unshielded = await self.sync_unshielded()
+        shielded = await self.sync_shielded()
         return {
             "unshielded": unshielded,
+            "shielded": {"count": len(shielded)},
             "network": str(self._wallet.network),
         }

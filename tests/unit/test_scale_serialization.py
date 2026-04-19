@@ -47,10 +47,10 @@ def test_serialize_contract_args() -> None:
     # List
     encoded_list = serialize_contract_args([1, 2])
     assert encoded_list[0] == (2 << 2) # length 2
-    # Dict
-    encoded_dict = serialize_contract_args({"a": 1})
-    assert encoded_dict[0] == (1 << 2) # 1 pair
-    assert b"a" in encoded_dict
+    # Dict (Struct)
+    encoded_dict = serialize_contract_args({"a": 1, "b": 2})
+    # SCALE Struct: Concatenate values in order, no length, no keys
+    assert encoded_dict == serialize_contract_args(1) + serialize_contract_args(2)
 
 def test_serialize_zswap_offer_advanced() -> None:
     offer = {

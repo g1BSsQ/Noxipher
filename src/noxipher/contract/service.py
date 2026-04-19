@@ -9,6 +9,9 @@ from typing import TYPE_CHECKING, Any
 
 from noxipher.contract.compact import CompactContract
 from noxipher.contract.instance import ContractInstance
+from noxipher.core.logger import get_logger
+
+log = get_logger(__name__)
 
 if TYPE_CHECKING:
     from noxipher.core.client import NoxipherClient
@@ -46,9 +49,12 @@ class ContractService:
             initial_state=initial_state or {},
         )
 
-        # Address is usually derived or returned in receipt
-        # For mock/demo, we use the tx hash as part of the address
-        address = f"0x{receipt.hash[:64]}"
+        # Address is extracted from receipt events (ContractDeployed)
+        address = receipt.contract_address
+        if not address:
+            # Fallback for older indexers or testnets
+            log.warning("contract_address_not_found_in_receipt", tx_hash=receipt.hash)
+            address = f"0x{receipt.hash[:64]}"
         return self.at_address(address, contract)
 
     def at_address(self, address: str, contract: CompactContract) -> ContractInstance:

@@ -557,12 +557,21 @@ class TransactionBuilder:
                     if tx.transaction_result:
                         from noxipher.tx.models import TransactionReceipt
 
+                        # Extract contract address from events
+                        contract_addr = None
+                        for event in (tx.events or []):
+                            if event.get("type") == "ContractDeployed":
+                                contract_addr = event.get("data", {}).get("address")
+                                break
+
                         return TransactionReceipt(
                             hash=tx.hash,
                             block_height=tx.block.height if tx.block else None,
                             block_hash=tx.block.hash if tx.block else None,
                             status=tx.transaction_result.status,
                             fee_paid=(int(tx.fees.get("paid_fees", 0)) if tx.fees else 0),
+                            contract_address=contract_addr,
+                            events=tx.events or [],
                         )
 
             except Exception:

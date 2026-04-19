@@ -26,6 +26,8 @@ class TransactionReceipt(BaseModel):
     block_hash: str | None = None
     status: str  # "SUCCESS", "PARTIAL_SUCCESS", "FAILURE"
     fee_paid: int = 0  # Specks
+    contract_address: str | None = None
+    events: list[dict[str, Any]] = []
 
 
 class UnshieldedInput(BaseModel):
