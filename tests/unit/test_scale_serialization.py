@@ -1,8 +1,7 @@
-
-import pytest
 from noxipher.tx.scale import serialize_contract_action
 
-def test_serialize_contract_call():
+
+def test_serialize_contract_call() -> None:
     action = {
         "type": "call",
         "address": b"\x01" * 32,
@@ -20,7 +19,7 @@ def test_serialize_contract_call():
     assert payload[33] == 0x2c
     assert b"test_method" in payload
 
-def test_serialize_contract_deploy():
+def test_serialize_contract_deploy() -> None:
     action = {
         "type": "deploy",
         "bytecode": b"\xde\xad\xbe\xef",

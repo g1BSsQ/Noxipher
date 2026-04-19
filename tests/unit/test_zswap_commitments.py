@@ -1,8 +1,7 @@
-
-import pytest
 from noxipher.zswap.notes import ShieldedCoinNote
 
-def test_shielded_coin_commitment():
+
+def test_shielded_coin_commitment() -> None:
     token_type = b"\x00" * 32
     owner_pk = b"\x01" * 32
     nonce = b"\x02" * 32
