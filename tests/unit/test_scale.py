@@ -1,8 +1,8 @@
 from noxipher.tx.scale import (
     MidnightTransactionSerializer,
+    serialize_bytes,
     serialize_transaction,
     serialize_u128,
-    serialize_bytes,
 )
 
 

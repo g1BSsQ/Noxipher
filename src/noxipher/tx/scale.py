@@ -7,7 +7,7 @@ Complies with Midnight Protocol v8.1.0-rc.1.
 from __future__ import annotations
 
 import struct
-from typing import Any, BinaryIO
+from typing import Any
 
 # --- Tagged Encoding Helpers ---
 

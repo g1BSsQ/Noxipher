@@ -1,8 +1,8 @@
 from noxipher.tx.scale import (
+    encode_scale_int,
     serialize_contract_action,
     serialize_contract_args,
     serialize_zswap_offer,
-    encode_scale_int,
 )
 
 
