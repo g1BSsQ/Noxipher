@@ -24,14 +24,25 @@ class ShieldedCoinNote(BaseModel):
     def compute_nullifier(self, secret_scalar: int) -> bytes:
         """
         Compute nullifier to spend coin.
-
-        ⚠️ NOT implemented: Needs verification from compact-runtime source.
+        nullifier = transient_hash([csk, index])
         """
-        raise NotImplementedError("compute_nullifier needs verification from compact-runtime")
+        from noxipher.crypto.fields import Fr
+        from noxipher.crypto.poseidon import transient_hash
 
-    def compute_nullifier_safe(self) -> bytes | None:
+        csk_f = Fr(secret_scalar)
+        index_f = Fr(self.merkle_tree_index)
+        
+        nullifier_f = transient_hash([csk_f, index_f])
+        return nullifier_f.to_bytes()
+
+    def compute_nullifier_safe(self, secret_scalar: int | None = None) -> bytes | None:
         """Attempt to compute nullifier, return None on failure."""
-        return None
+        if secret_scalar is None:
+            return None
+        try:
+            return self.compute_nullifier(secret_scalar)
+        except Exception:
+            return None
 
     class Config:
         arbitrary_types_allowed = True

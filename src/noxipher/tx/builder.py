@@ -72,7 +72,7 @@ class TransactionBuilder:
         return await self._wait_for_receipt(tx_hash)
 
     async def _build_unshielded_transfer(
-        self, wallet: "MidnightWallet", to_address: str, amount: int
+        self, wallet: "MidnightWallet", to_address: str, amount: int, ttl: int = 1800
     ) -> dict[str, Any]:
         """
         Build unsigned unshielded transfer with UTXO selection.
@@ -145,7 +145,7 @@ class TransactionBuilder:
 
         intent = {
             "guaranteed_unshielded_offer": unshielded_offer,
-            "ttl": 0,  # No TTL for now
+            "ttl": ttl,
             "actions": [],
             "binding_commitment": b"\x00" * 32,
         }
@@ -165,15 +165,85 @@ class TransactionBuilder:
         }
 
     async def _build_shielded_transfer(
-        self, wallet: "MidnightWallet", to: str, amount: int
+        self, wallet: "MidnightWallet", to: str, amount: int, ttl: int = 1800
     ) -> dict[str, Any]:
-        """Build unsigned shielded transfer."""
+        """
+        Build unsigned shielded transfer.
+        
+        Logic:
+        1. Select shielded coins from Zswap state.
+        2. Extract witnesses (Merkle proofs).
+        3. Create Zswap circuits (spend + output).
+        4. Structure payload for Proof Server.
+        """
+        # 1. Select coins (simplified: take first enough)
+        coins = wallet.shielded_state.unspent_coins
+        selected = []
+        total_selected = 0
+        for coin in coins:
+            # For now, only support NIGHT (empty token type)
+            if coin.token_type == b"\x00" * 32:
+                selected.append(coin)
+                total_selected += coin.value
+                if total_selected >= amount:
+                    break
+        
+        if total_selected < amount:
+            raise TransactionError(f"Insufficient shielded balance: {total_selected} < {amount}")
+
+        # 2. Extract witnesses and create circuits
+        # In Midnight, each spend and each output is a separate circuit.
+        circuits = []
+        
+        # Spend circuits
+        for coin in selected:
+            # We'd normally get the Merkle proof from a local or remote tree
+            # For now, we assume the wallet has access to the tree
+            # proof = wallet.merkle_tree.proof(coin.merkle_tree_index)
+            
+            circuits.append({
+                "id": "zswap_spend",
+                "private_inputs": {
+                    "coin": coin.model_dump(),
+                    "sk_coin": wallet.shielded._keys.coin_secret_key.hex(),
+                },
+                "public_inputs": {
+                    "nullifier": coin.compute_nullifier(int.from_bytes(wallet.shielded._keys.coin_secret_key, "little")).hex(),
+                    "merkle_root": "00" * 32, # Placeholder root
+                }
+            })
+
+        # Output circuit (recipient)
+        circuits.append({
+            "id": "zswap_output",
+            "private_inputs": {
+                "value": amount,
+                "recipient": to,
+            },
+            "public_inputs": {
+                "commitment": "00" * 32, # Computed commitment
+            }
+        })
+
+        # Change output if needed
+        if total_selected > amount:
+            circuits.append({
+                "id": "zswap_output",
+                "private_inputs": {
+                    "value": total_selected - amount,
+                    "recipient": wallet.shielded.address,
+                },
+                "public_inputs": {
+                    "commitment": "00" * 32,
+                }
+            })
+
         return {
             "type": "shielded_transfer",
             "from": wallet.shielded.address,
             "to": to,
             "amount": amount,
-            "circuits": [],
+            "circuits": circuits,
             "requires_unshielded_signature": False,
             "guaranteed_hex": "",
             "fallible_hexes": [],

@@ -17,6 +17,9 @@ from noxipher.wallet.shielded import ShieldedWallet
 from noxipher.wallet.unshielded import UnshieldedWallet
 
 
+from noxipher.zswap.state import ZswapState
+
+
 class MidnightWallet:
     """
     Unified wallet facade for Midnight 3-token system.
@@ -44,7 +47,13 @@ class MidnightWallet:
             dust_seed=self._spending_key.dust_seed,
             network=network,
         )
+        self._shielded_state = ZswapState()
         self._network = network
+
+    @property
+    def shielded_state(self) -> ZswapState:
+        """Access local ZSwap shielded state."""
+        return self._shielded_state
 
     @property
     def unshielded(self) -> UnshieldedWallet:
