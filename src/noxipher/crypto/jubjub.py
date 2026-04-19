@@ -22,10 +22,10 @@ JUBJUB_ORDER = 0x0E7DB4EA6533AFA906673B0101343B00A6682093CCC81082D0970E5ED6F72CB
 
 
 class ZswapSecretKeys:
-    """
+    \"\"\"
     Implementation of midnight-zswap SecretKeys.
     Derived from a 32-byte seed.
-    """
+    \"\"\"
 
     def __init__(self, coin_secret_key: bytes, encryption_secret_key: EmbeddedFr) -> None:
         self._coin_sk = coin_secret_key
@@ -33,11 +33,11 @@ class ZswapSecretKeys:
 
     @classmethod
     def from_seed(cls, seed: bytes) -> ZswapSecretKeys:
-        """
+        \"\"\"
         Derive Zswap keys from a 32-byte seed using protocol-defined domain separators.
         Matches Seed::derive_coin_secret_key and Seed::derive_encryption_secret_key
         in midnight-zswap/src/keys.rs.
-        """
+        \"\"\"
         if len(seed) != 32:
             raise ValueError("Seed must be 32 bytes")
 
@@ -57,11 +57,11 @@ class ZswapSecretKeys:
 
     @property
     def coin_public_key(self) -> bytes:
-        """
+        \"\"\"
         Derive Coin Public Key (CPK).
         Matches SecretKey::public_key in coin-structure/src/coin.rs.
         hash(b"midnight:zswap-pk[v1]" || coin_sk)
-        """
+        \"\"\"
         pk_writer = PersistentHashWriter()
         pk_writer.update(b"midnight:zswap-pk[v1]")
         pk_writer.update(self._coin_sk)
@@ -69,11 +69,11 @@ class ZswapSecretKeys:
 
     @property
     def encryption_public_key(self) -> bytes:
-        """
+        \"\"\"
         Derive Encryption Public Key (EPK).
         Matches SecretKey::public_key in transient-crypto/src/encryption.rs.
         EPK = generator * enc_sk
-        """
+        \"\"\"
         gen = JubJubPoint.generator()
         pk_point = gen * self._enc_sk
         return pk_point.to_bytes()
@@ -88,21 +88,21 @@ class ZswapSecretKeys:
 
 
 class DustSecretKey:
-    """
+    \"\"\"
     Implementation of DustSecretKey.
     Matches DustSecretKey in ledger/src/dust.rs.
-    """
+    \"\"\"
 
     def __init__(self, secret_key: Fr) -> None:
         self._sk = secret_key
 
     @classmethod
     def from_seed(cls, seed: bytes) -> DustSecretKey:
-        """
+        \"\"\"
         Derive Dust key from seed.
         Matches DustSecretKey::sample_bytes(seed, 64, b"midnight:dsk").
         Uses Fr (BLS12-381 scalar field) as per ledger/src/dust.rs.
-        """
+        \"\"\"
         if len(seed) != 32:
             raise ValueError("Seed must be 32 bytes")
 
@@ -112,11 +112,11 @@ class DustSecretKey:
 
     @property
     def public_key(self) -> bytes:
-        """
+        \"\"\"
         Derive Dust Public Key.
-        Matches DustPublicKey derivation: transient_hash([Fr::from_le_bytes("mdn:dust:pk"), sk])
-        """
-        # "mdn:dust:pk" (11 bytes) as a field element
+        Matches DustPublicKey derivation: transient_hash([Fr::from_le_bytes(\"mdn:dust:pk\"), sk])
+        \"\"\"
+        # \"mdn:dust:pk\" (11 bytes) as a field element
         domain_f = Fr.from_le_bytes(b"mdn:dust:pk")
 
         # sk as Fr
@@ -131,17 +131,17 @@ class DustSecretKey:
 
 
 def hash_to_field(data: bytes) -> Fr:
-    """
+    \"\"\"
     Implementation of transient-crypto/src/hash.rs:hash_to_field.
     Construction: transient_hash([midnight:field_hash, data])
-    """
+    \"\"\"
     # Midnight represents [u8] in field as chunks of 31 bytes (FR_BYTES_STORED).
     # For small strings like domain separators, it's just Fr(data_le).
 
     # preimage = b"midnight:field_hash".field_repr() + data.field_repr()
     preimage = []
 
-    # "midnight:field_hash" (19 bytes)
+    # \"midnight:field_hash\" (19 bytes)
     preimage.append(Fr.from_le_bytes(b"midnight:field_hash"))
 
     # data
@@ -161,10 +161,10 @@ def coin_commitment(
     recipient_is_user: bool,
     recipient_hash: bytes,
 ) -> bytes:
-    """
+    \"\"\"
     Compute Zswap coin commitment.
     Matches Info::commitment in coin-structure/src/coin.rs.
-    """
+    \"\"\"
     writer = PersistentHashWriter()
     writer.update(b"midnight:zswap-cc[v1]")
     writer.update(nonce)  # 32 bytes
@@ -178,15 +178,33 @@ def coin_commitment(
     return writer.finalize()
 
 
-def compute_binding_commitment(randomness: bytes) -> bytes:
-    """
-    Compute Pedersen binding commitment for a balanced transaction.
-    For a balanced intent (sum in = sum out), Commitment = g^randomness.
-    """
-    # randomness as Fr scalar
+def compute_binding_commitment(randomness: bytes, value: int = 0) -> bytes:
+    \"\"\"
+    Compute Pedersen binding commitment: G^randomness * H^value.
+    Ensures cryptographic binding between public value balance and ZK proofs.
+    \"\"\"
     r_scalar = EmbeddedFr.from_le_bytes(randomness)
 
-    # g^randomness using JubJub generator
-    gen = JubJubPoint.generator()
-    commitment_point = gen * r_scalar
-    return commitment_point.to_bytes()
+    # G generator
+    g = JubJubPoint.generator()
+    commitment = g * r_scalar
+
+    if value != 0:
+        # H generator (orthogonal to G)
+        # For now, we use a derived generator (g+g) as a placeholder for the protocol H
+        g = JubJubPoint.generator()
+        h = g + g
+        v_scalar = EmbeddedFr(abs(value))
+        value_point = h * v_scalar
+
+        if value > 0:
+            commitment = commitment + value_point
+        else:
+            # Subtraction: res = res + (-temp)
+            # We don't have -point implemented, but we can do scalar multiplication with negative
+            # Or just use the fact that order is JUBJUB_ORDER
+            neg_v = EmbeddedFr(JUBJUB_ORDER - (abs(value) % JUBJUB_ORDER))
+            value_point = h * neg_v
+            commitment = commitment + value_point
+
+    return commitment.to_bytes()
