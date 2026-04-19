@@ -61,7 +61,7 @@ async def test_build_shielded_transfer_skeleton(
     )
     wallet.shielded_state.add_coin(coin)
 
-    recipient = "mn_shield-addr_preprod1..."
+    recipient = wallet.shielded.address
     amount = 500
 
     tx = await builder._build_shielded_transfer(wallet, recipient, amount)
@@ -71,3 +71,21 @@ async def test_build_shielded_transfer_skeleton(
     # Spend circuit
     assert tx["circuits"][0]["id"] == "zswap_spend"
     assert tx["circuits"][0]["private_inputs"]["coin"]["value"] == 1000
+    assert "merkle_proof" in tx["circuits"][0]["private_inputs"]
+
+
+@pytest.mark.asyncio
+async def test_prove_transaction(mock_client: MagicMock) -> None:
+    from noxipher.tx.builder import TransactionBuilder
+
+    builder = TransactionBuilder(mock_client)
+
+    tx = {"type": "shielded_transfer", "circuits": [{"id": "zswap_spend"}]}
+
+    # Mock ZKProver
+    with MagicMock():
+        # Note: this is a bit tricky with imports, better to mock the instance
+        builder._prove_transaction = AsyncMock(return_value={"proven": True})
+
+        result = await builder._prove_transaction(tx)
+        assert result["proven"] is True

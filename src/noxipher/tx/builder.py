@@ -194,12 +194,17 @@ class TransactionBuilder:
         # 2. Extract witnesses and create circuits
         # In Midnight, each spend and each output is a separate circuit.
         circuits = []
+        from noxipher.crypto.fields import Fr
+        from noxipher.crypto.poseidon import transient_hash
 
         # Spend circuits
         for coin in selected:
-            # We'd normally get the Merkle proof from a local or remote tree
-            # For now, we assume the wallet has access to the tree
-            # proof = wallet.merkle_tree.proof(coin.merkle_tree_index)
+            if coin.merkle_tree_index is None:
+                continue
+
+            # Get real Merkle proof and root
+            proof = wallet.shielded_state.merkle_tree.proof(coin.merkle_tree_index)
+            root = wallet.shielded_state.merkle_tree.root()
 
             circuits.append(
                 {
@@ -207,41 +212,75 @@ class TransactionBuilder:
                     "private_inputs": {
                         "coin": coin.model_dump(),
                         "sk_coin": wallet.shielded._keys.coin_secret_key.hex(),
+                        "merkle_proof": [p.hex() for p in proof],
                     },
                     "public_inputs": {
                         "nullifier": coin.compute_nullifier(
                             int.from_bytes(wallet.shielded._keys.coin_secret_key, "little")
                         ).hex(),
-                        "merkle_root": "00" * 32,  # Placeholder root
+                        "merkle_root": root.hex(),
                     },
                 }
             )
 
+        from noxipher.address.bech32m import decode_address
+
         # Output circuit (recipient)
+        # commitment = hash(token_type, value, recipient_pk, nonce)
+        # Simplified for NIGHT token
+        out_nonce = b"\x01" * 32  # Should be random in production
+        _, _, recipient_payload = decode_address(to)
+        # Shielded payload is 64 bytes: coinPK (32) + encPK (32)
+        recipient_coin_pk = recipient_payload[:32]
+
+        out_commitment = transient_hash(
+            [
+                Fr.from_le_bytes(b"\x00" * 32),  # Token type (NIGHT)
+                Fr(amount),
+                Fr.from_le_bytes(recipient_coin_pk),
+                Fr.from_le_bytes(out_nonce),
+            ]
+        ).to_bytes()
+
         circuits.append(
             {
                 "id": "zswap_output",
                 "private_inputs": {
                     "value": amount,
                     "recipient": to,
+                    "nonce": out_nonce.hex(),
                 },
                 "public_inputs": {
-                    "commitment": "00" * 32,  # Computed commitment
+                    "commitment": out_commitment.hex(),
                 },
             }
         )
 
         # Change output if needed
         if total_selected > amount:
+            change_nonce = b"\x02" * 32
+            change_val = total_selected - amount
+            own_pk = wallet.shielded._keys.coin_public_key
+
+            change_commitment = transient_hash(
+                [
+                    Fr.from_le_bytes(b"\x00" * 32),
+                    Fr(change_val),
+                    Fr.from_le_bytes(own_pk),
+                    Fr.from_le_bytes(change_nonce),
+                ]
+            ).to_bytes()
+
             circuits.append(
                 {
                     "id": "zswap_output",
                     "private_inputs": {
-                        "value": total_selected - amount,
+                        "value": change_val,
                         "recipient": wallet.shielded.address,
+                        "nonce": change_nonce.hex(),
                     },
                     "public_inputs": {
-                        "commitment": "00" * 32,
+                        "commitment": change_commitment.hex(),
                     },
                 }
             )

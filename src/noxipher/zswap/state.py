@@ -14,42 +14,6 @@ from noxipher.crypto.poseidon import transient_hash
 from noxipher.zswap.notes import ShieldedCoinNote
 
 
-@dataclass
-class ZswapState:
-    """
-    Local ZSwap state for a wallet.
-    Synced from Indexer shielded transaction stream.
-    """
-
-    unspent_coins: list[ShieldedCoinNote] = field(default_factory=list)
-    spent_nullifiers: set[bytes] = field(default_factory=set)
-    last_synced_height: int = 0
-
-    def add_coin(self, note: ShieldedCoinNote) -> None:
-        """Add an unspent coin."""
-        self.unspent_coins.append(note)
-
-    def mark_spent(self, nullifier: bytes) -> None:
-        """Mark a coin as spent by nullifier."""
-        self.spent_nullifiers.add(nullifier)
-        self.unspent_coins = [
-            c for c in self.unspent_coins if c.compute_nullifier_safe() != nullifier
-        ]
-
-    def get_balance(self, token_type: bytes | None = None) -> dict[bytes, int]:
-        """
-        Compute shielded balance from unspent coins.
-
-        Args:
-            token_type: Filter by token type. None = all.
-        """
-        balances: dict[bytes, int] = {}
-        for coin in self.unspent_coins:
-            if token_type is None or coin.token_type == token_type:
-                balances[coin.token_type] = balances.get(coin.token_type, 0) + coin.value
-        return balances
-
-
 class MerkleTree:
     """
     Simplified Midnight commitment Merkle tree.
@@ -114,10 +78,6 @@ class MerkleTree:
 
         proof_path = []
 
-        # We need the nodes at each level to find siblings
-        # For simplicity, we recompute necessary parts of the tree
-        # In production, we'd cache the tree or use a more efficient data structure
-
         # Build a temporary tree of necessary nodes
         tree_nodes: dict[int, dict[int, Fr]] = {level: {} for level in range(self._depth + 1)}
         for idx, leaf in self._leaves.items():
@@ -144,3 +104,46 @@ class MerkleTree:
             curr //= 2
 
         return proof_path
+
+
+@dataclass
+class ZswapState:
+    """
+    Local ZSwap state for a wallet.
+    Synced from Indexer shielded transaction stream.
+    """
+
+    unspent_coins: list[ShieldedCoinNote] = field(default_factory=list)
+    spent_nullifiers: set[bytes] = field(default_factory=set)
+    last_synced_height: int = 0
+    merkle_tree: MerkleTree = field(default_factory=MerkleTree)
+
+    def add_coin(self, note: ShieldedCoinNote) -> None:
+        """Add an unspent coin."""
+        self.unspent_coins.append(note)
+        if note.merkle_tree_index is not None:
+            # Simplified commitment for mock
+            commitment = transient_hash(
+                [Fr.from_le_bytes(note.token_type), Fr(note.value), Fr.from_le_bytes(note.nonce)]
+            ).to_bytes()
+            self.merkle_tree.insert(note.merkle_tree_index, commitment)
+
+    def mark_spent(self, nullifier: bytes) -> None:
+        """Mark a coin as spent by nullifier."""
+        self.spent_nullifiers.add(nullifier)
+        self.unspent_coins = [
+            c for c in self.unspent_coins if c.compute_nullifier_safe() != nullifier
+        ]
+
+    def get_balance(self, token_type: bytes | None = None) -> dict[bytes, int]:
+        """
+        Compute shielded balance from unspent coins.
+
+        Args:
+            token_type: Filter by token type. None = all.
+        """
+        balances: dict[bytes, int] = {}
+        for coin in self.unspent_coins:
+            if token_type is None or coin.token_type == token_type:
+                balances[coin.token_type] = balances.get(coin.token_type, 0) + coin.value
+        return balances
