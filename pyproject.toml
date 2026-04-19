@@ -43,6 +43,10 @@ node = [
     "py-sr25519-bindings>=0.2.0",
     "substrate-interface>=1.7.0",
 ]
+docs = [
+    "mkdocs-material>=9.5.0",
+    "mkdocstrings[python]>=0.24.0",
+]
 
 [project.urls]
 Homepage     = "https://github.com/g1BSsQ/Noxipher"
