@@ -18,6 +18,7 @@ class ShieldedCoinNote(BaseModel):
     token_type: bytes  # RawTokenType (32 bytes)
     value: int  # Amount in Specks
     nonce: bytes  # Random nonce (32 bytes)
+    owner_pk: bytes  # Owner's coin public key (32 bytes)
     merkle_tree_index: int  # Position in global Merkle tree
     tx_hash: str | None = None  # Transaction hash when coin was created
 
@@ -34,6 +35,23 @@ class ShieldedCoinNote(BaseModel):
 
         nullifier_f = transient_hash([csk_f, index_f])
         return nullifier_f.to_bytes()
+
+    def compute_commitment(self) -> bytes:
+        """
+        Compute coin commitment.
+        commitment = transient_hash([token_type, value, owner_pk, nonce])
+        """
+        from noxipher.crypto.fields import Fr
+        from noxipher.crypto.poseidon import transient_hash
+
+        return transient_hash(
+            [
+                Fr.from_le_bytes(self.token_type),
+                Fr(self.value),
+                Fr.from_le_bytes(self.owner_pk),
+                Fr.from_le_bytes(self.nonce),
+            ]
+        ).to_bytes()
 
     def compute_nullifier_safe(self, secret_scalar: int | None = None) -> bytes | None:
         """Attempt to compute nullifier, return None on failure."""

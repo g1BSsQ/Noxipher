@@ -301,8 +301,7 @@ def serialize_standard_transaction(stx: dict[str, Any]) -> bytes:
     payload += serialize_u32(len(fallible_coins))
     for k, v in fallible_coins.items():
         payload += serialize_le_u16(int(k))
-        # payload += serialize_zswap_offer(v) # Not implemented yet
-        payload += v
+        payload += serialize_zswap_offer(v)
 
     # binding_randomness: PedersenRandomness (32 bytes)
     payload += stx.get("binding_randomness", b"\x00" * 32)
@@ -337,8 +336,7 @@ def serialize_intent(intent: dict[str, Any]) -> bytes:
     actions = intent.get("actions", [])
     payload += serialize_u32(len(actions))
     for act in actions:
-        # payload += serialize_contract_action(act) # Not implemented yet
-        payload += act
+        payload += serialize_contract_action(act)
 
     # dust_actions: Option<Sp<DustActions>>
     payload += serialize_option(intent.get("dust_actions"))
@@ -409,6 +407,75 @@ def serialize_utxo_output(output: dict[str, Any]) -> bytes:
     return tagged_serialize("unshielded-utxo-output[v1]", bytes(payload))
 
 
+def serialize_zswap_offer(offer: dict[str, Any] | bytes) -> bytes:
+    """
+    ZswapOffer enum [v1].
+    Discriminant 0 = ShieldedOffer.
+    """
+    if isinstance(offer, bytes):
+        return offer
+
+    payload = bytearray()
+    # Assuming ShieldedOffer (v1) for now
+    payload += bytes([0])  # Discriminant
+
+    # ShieldedOffer: spend_proofs (Vec<Proof>), output_proofs (Vec<Proof>), etc.
+    # In Noxipher, we might pass pre-serialized parts or the full offer dict
+    if "raw_payload" in offer:
+        payload += offer["raw_payload"]
+    else:
+        # Complex nested serialization - for now handle common fields
+        # spend_proofs: Vec<Proof>
+        spends = offer.get("spends", [])
+        payload += serialize_u32(len(spends))
+        for s in spends:
+            payload += s  # Proof bytes
+
+        # output_proofs: Vec<Proof>
+        outputs = offer.get("outputs", [])
+        payload += serialize_u32(len(outputs))
+        for o in outputs:
+            payload += o  # Proof bytes
+
+    return tagged_serialize("zswap-offer[v1]", bytes(payload))
+
+
+def serialize_contract_action(action: dict[str, Any] | bytes) -> bytes:
+    """
+    ContractAction enum [v1].
+    Discriminant 0 = Deploy
+    Discriminant 1 = Call
+    """
+    if isinstance(action, bytes):
+        return action
+
+    payload = bytearray()
+    act_type = action.get("type", "call")
+
+    if act_type == "deploy":
+        payload += bytes([0])  # Discriminant: Deploy
+        # bytecode: Vec<u8>
+        bytecode = action["bytecode"]
+        payload += serialize_u32(len(bytecode))
+        payload += bytecode
+        # initial_state: Vec<u8>
+        state = action.get("initial_state", b"")
+        payload += serialize_u32(len(state))
+        payload += state
+    else:
+        payload += bytes([1])  # Discriminant: Call
+        # address: ContractAddress (32 bytes)
+        payload += action["address"]
+        # entry_point: String
+        payload += serialize_string(action["entry_point"])
+        # args: Vec<u8>
+        args = action.get("args", b"")
+        payload += serialize_u32(len(args))
+        payload += args
+
+    return tagged_serialize("contract-action[v1]", bytes(payload))
+
+
 def serialize_intent_fields(intent: dict[str, Any]) -> bytes:
     """
     Serialize Intent fields without the 'intent[v6]' tag.
@@ -434,7 +501,7 @@ def serialize_intent_fields(intent: dict[str, Any]) -> bytes:
     actions = intent.get("actions", [])
     payload += serialize_u32(len(actions))
     for act in actions:
-        payload += act
+        payload += serialize_contract_action(act)
 
     # dust_actions: Option<Sp<DustActions>>
     payload += serialize_option(intent.get("dust_actions"))

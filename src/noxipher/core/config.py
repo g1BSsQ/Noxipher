@@ -23,6 +23,7 @@ class NetworkConfig(BaseModel):
     hosted_proof_server_url: str | None = None
 
     coin_type: int = Field(default=877, description="SLIP-0044 Coin Type")
+    min_fee: int = Field(default=10_000, description="Minimum transaction fee in Specks")
 
 
 NETWORK_CONFIGS: dict[Network, NetworkConfig] = {

@@ -36,8 +36,20 @@ class ContractService:
 
         Returns: ContractInstance with deployed address.
         """
-        # TODO: Full deployment flow needs transaction builder
-        raise NotImplementedError("Contract deployment needs full tx builder implementation")
+        # For now, we assume bytecode is passed as a string/bytes in initial_state or similar
+        # Real compact contracts have a .wasm circuit that acts as bytecode
+        bytecode = contract.get_circuit_path(contract.name).read_bytes()
+        
+        receipt = await self._client.tx.deploy_contract(
+            wallet=wallet,
+            bytecode=bytecode,
+            initial_state=b"" # TODO: Serialize initial_state if provided
+        )
+        
+        # Address is usually derived or returned in receipt
+        # For mock/demo, we use the tx hash as part of the address
+        address = f"0x{receipt.hash[:64]}"
+        return self.at_address(address, contract)
 
     def at_address(self, address: str, contract: CompactContract) -> ContractInstance:
         """Create ContractInstance for an already-deployed contract."""

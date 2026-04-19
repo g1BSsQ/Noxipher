@@ -16,6 +16,7 @@ def mock_wallet() -> MidnightWallet:
 @pytest.fixture
 def mock_client() -> MagicMock:
     client = MagicMock()
+    client.config.min_fee = 10_000
     client.indexer = AsyncMock()
     return client
 

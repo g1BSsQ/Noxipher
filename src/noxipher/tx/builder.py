@@ -77,6 +77,26 @@ class TransactionBuilder:
         tx_hash = await self._client.node.submit_extrinsic(raw_bytes)
         return await self._wait_for_receipt(tx_hash)
 
+    async def deploy_contract(
+        self,
+        wallet: "MidnightWallet",
+        bytecode: bytes,
+        initial_state: bytes = b"",
+    ) -> "TransactionReceipt":
+        """Deploy a new smart contract."""
+        unsigned_tx = {
+            "type": "contract_deploy",
+            "bytecode": bytecode,
+            "initial_state": initial_state,
+            "circuits": [],
+            "requires_unshielded_signature": True,
+        }
+        # In Midnight, deployment doesn't usually need ZK proofs for the action itself,
+        # but the transaction must still be balanced and signed.
+        raw_bytes = self._serialize_transaction(unsigned_tx, wallet)
+        tx_hash = await self._client.node.submit_extrinsic(raw_bytes)
+        return await self._wait_for_receipt(tx_hash)
+
     async def _build_unshielded_transfer(
         self,
         wallet: "MidnightWallet",
@@ -341,6 +361,47 @@ class TransactionBuilder:
             get_unshielded_signing_payload,
             serialize_transaction,
         )
+
+        # 0. Handle contract deployment/call special structuring
+        if tx_data.get("type") == "contract_deploy":
+            # Structure for StandardTransaction
+            action = {
+                "type": "deploy",
+                "bytecode": tx_data["bytecode"],
+                "initial_state": tx_data["initial_state"],
+            }
+            intent = {
+                "guaranteed_unshielded_offer": {"inputs": [], "outputs": [], "signatures": []},
+                "ttl": 1800,
+                "actions": [action],
+                "binding_commitment": b"\x00" * 32,
+            }
+            stx = {
+                "network_id": self._client.config.name,
+                "intents": {"0": intent},
+                "binding_randomness": b"\x00" * 32,
+            }
+            tx_data["standard"] = stx
+        elif tx_data.get("type") == "contract_call":
+            # Structure for StandardTransaction
+            action = {
+                "type": "call",
+                "address": bytes.fromhex(tx_data["contract_address"]),
+                "entry_point": tx_data["entry_point"],
+                "args": b"",  # TODO: Serialize args
+            }
+            intent = {
+                "guaranteed_unshielded_offer": {"inputs": [], "outputs": [], "signatures": []},
+                "ttl": 1800,
+                "actions": [action],
+                "binding_commitment": b"\x00" * 32,
+            }
+            stx = {
+                "network_id": self._client.config.name,
+                "intents": {"0": intent},
+                "binding_randomness": b"\x00" * 32,
+            }
+            tx_data["standard"] = stx
 
         # 1. Handle unshielded signing if needed
         if tx_data.get("requires_unshielded_signature"):

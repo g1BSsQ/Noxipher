@@ -11,6 +11,7 @@ from noxipher.wallet.wallet import MidnightWallet
 def mock_client() -> MagicMock:
     client = MagicMock()
     client.config.name = "preprod1"
+    client.config.min_fee = 10_000
     client.indexer = AsyncMock()
     return client
 
@@ -60,7 +61,11 @@ async def test_build_shielded_transfer_skeleton(
     from noxipher.zswap.notes import ShieldedCoinNote
 
     coin = ShieldedCoinNote(
-        token_type=b"\x00" * 32, value=1000, nonce=b"\x00" * 32, merkle_tree_index=5
+        token_type=b"\x00" * 32,
+        value=1000,
+        nonce=b"\x00" * 32,
+        owner_pk=wallet.shielded._keys.coin_public_key,
+        merkle_tree_index=5,
     )
     wallet.shielded_state.add_coin(coin)
 
@@ -104,7 +109,11 @@ async def test_build_shielded_transfer_multi_asset(
     # Custom token type
     token_type = b"\x01" * 32
     coin = ShieldedCoinNote(
-        token_type=token_type, value=2000, nonce=b"\x00" * 32, merkle_tree_index=10
+        token_type=token_type,
+        value=2000,
+        nonce=b"\x00" * 32,
+        owner_pk=wallet.shielded._keys.coin_public_key,
+        merkle_tree_index=10,
     )
     wallet.shielded_state.add_coin(coin)
 

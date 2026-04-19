@@ -71,9 +71,8 @@ class DAppConnector:
         inputs_val = sum(int(i["value"]) for i in offer.get("inputs", []))
         outputs_val = sum(int(o["value"]) for o in offer.get("outputs", []))
 
-        # Simplified: assume a flat fee of 10,000 Specks if not specified
-        # In production, this would be fetched from network config
-        fee = 10_000
+        # Fetch minimum fee from network config
+        fee = self._client.config.min_fee
         required = outputs_val + fee
 
         if inputs_val < required:

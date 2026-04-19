@@ -122,10 +122,7 @@ class ZswapState:
         """Add an unspent coin."""
         self.unspent_coins.append(note)
         if note.merkle_tree_index is not None:
-            # Simplified commitment for mock
-            commitment = transient_hash(
-                [Fr.from_le_bytes(note.token_type), Fr(note.value), Fr.from_le_bytes(note.nonce)]
-            ).to_bytes()
+            commitment = note.compute_commitment()
             self.merkle_tree.insert(note.merkle_tree_index, commitment)
 
     def mark_spent(self, nullifier: bytes) -> None:
