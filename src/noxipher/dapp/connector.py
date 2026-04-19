@@ -46,8 +46,8 @@ class DAppConnector:
         """
         Balance unbound transaction — add inputs/outputs to cover fees.
         """
-        from noxipher.tx.builder import TransactionError
-        
+        from noxipher.core.exceptions import TransactionError
+
         # 1. Extract intent
         # Supports both wrapped and raw StandardTransaction
         stx = unbound_tx.get("standard", unbound_tx)
@@ -55,7 +55,7 @@ class DAppConnector:
         if not intents:
             stx["intents"] = {"0": {"ttl": ttl_seconds, "actions": []}}
             intents = stx["intents"]
-            
+
         intent = intents.get("0") or intents.get(0)
         if not intent:
             intent = {"ttl": ttl_seconds, "actions": []}
@@ -70,49 +70,57 @@ class DAppConnector:
         # 3. Calculate current balance
         inputs_val = sum(int(i["value"]) for i in offer.get("inputs", []))
         outputs_val = sum(int(o["value"]) for o in offer.get("outputs", []))
-        
+
         # Simplified: assume a flat fee of 10,000 Specks if not specified
         # In production, this would be fetched from network config
-        fee = 10_000 
+        fee = 10_000
         required = outputs_val + fee
-        
+
         if inputs_val < required:
             # 4. Fetch and add more UTXOs
             utxos = await self._wallet.unshielded.get_utxos(self._client.indexer)
             added_val = 0
-            
+
             # Filter out already used UTXOs
-            used_outpoints = { (i["intent_hash"].hex(), i["output_no"]) for i in offer["inputs"] }
-            
+            used_outpoints = {(i["intent_hash"].hex(), i["output_no"]) for i in offer["inputs"]}
+
             for utxo in utxos:
                 i_hash = utxo.get("intentHash") or utxo.get("intent_hash") or ("00" * 32)
                 o_no = utxo.get("outputNo") or utxo.get("output_no") or 0
-                
+
                 if (i_hash, o_no) in used_outpoints:
                     continue
-                    
-                offer["inputs"].append({
-                    "value": int(utxo["value"]),
-                    "owner": self._wallet.unshielded.public_key,
-                    "type_": 0,
-                    "intent_hash": bytes.fromhex(i_hash),
-                    "output_no": int(o_no),
-                })
+
+                offer["inputs"].append(
+                    {
+                        "value": int(utxo["value"]),
+                        "owner": self._wallet.unshielded.public_key,
+                        "type_": 0,
+                        "intent_hash": bytes.fromhex(i_hash),
+                        "output_no": int(o_no),
+                    }
+                )
                 added_val += int(utxo["value"])
                 if inputs_val + added_val >= required:
                     break
-            
+
             inputs_val += added_val
             if inputs_val < required:
-                raise TransactionError(f"Insufficient funds to balance transaction. Need {required}, have {inputs_val}")
+                msg = (
+                    f"Insufficient funds to balance transaction. "
+                    f"Need {required}, have {inputs_val}"
+                )
+                raise TransactionError(msg)
 
         # 5. Add change output
         if inputs_val > required:
-            offer["outputs"].append({
-                "value": inputs_val - required,
-                "owner": self._wallet.unshielded.public_key,
-                "type_": 0,
-            })
+            offer["outputs"].append(
+                {
+                    "value": inputs_val - required,
+                    "owner": self._wallet.unshielded.public_key,
+                    "type_": 0,
+                }
+            )
 
         # 6. Set TTL
         intent["ttl"] = ttl_seconds

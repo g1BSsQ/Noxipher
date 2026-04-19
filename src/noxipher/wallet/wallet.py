@@ -15,8 +15,6 @@ from noxipher.crypto.keys import SpendingKey
 from noxipher.wallet.dust import DustWallet
 from noxipher.wallet.shielded import ShieldedWallet
 from noxipher.wallet.unshielded import UnshieldedWallet
-
-
 from noxipher.zswap.state import ZswapState
 
 

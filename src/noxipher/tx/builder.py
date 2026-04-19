@@ -169,7 +169,7 @@ class TransactionBuilder:
     ) -> dict[str, Any]:
         """
         Build unsigned shielded transfer.
-        
+
         Logic:
         1. Select shielded coins from Zswap state.
         2. Extract witnesses (Merkle proofs).
@@ -187,56 +187,64 @@ class TransactionBuilder:
                 total_selected += coin.value
                 if total_selected >= amount:
                     break
-        
+
         if total_selected < amount:
             raise TransactionError(f"Insufficient shielded balance: {total_selected} < {amount}")
 
         # 2. Extract witnesses and create circuits
         # In Midnight, each spend and each output is a separate circuit.
         circuits = []
-        
+
         # Spend circuits
         for coin in selected:
             # We'd normally get the Merkle proof from a local or remote tree
             # For now, we assume the wallet has access to the tree
             # proof = wallet.merkle_tree.proof(coin.merkle_tree_index)
-            
-            circuits.append({
-                "id": "zswap_spend",
-                "private_inputs": {
-                    "coin": coin.model_dump(),
-                    "sk_coin": wallet.shielded._keys.coin_secret_key.hex(),
-                },
-                "public_inputs": {
-                    "nullifier": coin.compute_nullifier(int.from_bytes(wallet.shielded._keys.coin_secret_key, "little")).hex(),
-                    "merkle_root": "00" * 32, # Placeholder root
+
+            circuits.append(
+                {
+                    "id": "zswap_spend",
+                    "private_inputs": {
+                        "coin": coin.model_dump(),
+                        "sk_coin": wallet.shielded._keys.coin_secret_key.hex(),
+                    },
+                    "public_inputs": {
+                        "nullifier": coin.compute_nullifier(
+                            int.from_bytes(wallet.shielded._keys.coin_secret_key, "little")
+                        ).hex(),
+                        "merkle_root": "00" * 32,  # Placeholder root
+                    },
                 }
-            })
+            )
 
         # Output circuit (recipient)
-        circuits.append({
-            "id": "zswap_output",
-            "private_inputs": {
-                "value": amount,
-                "recipient": to,
-            },
-            "public_inputs": {
-                "commitment": "00" * 32, # Computed commitment
+        circuits.append(
+            {
+                "id": "zswap_output",
+                "private_inputs": {
+                    "value": amount,
+                    "recipient": to,
+                },
+                "public_inputs": {
+                    "commitment": "00" * 32,  # Computed commitment
+                },
             }
-        })
+        )
 
         # Change output if needed
         if total_selected > amount:
-            circuits.append({
-                "id": "zswap_output",
-                "private_inputs": {
-                    "value": total_selected - amount,
-                    "recipient": wallet.shielded.address,
-                },
-                "public_inputs": {
-                    "commitment": "00" * 32,
+            circuits.append(
+                {
+                    "id": "zswap_output",
+                    "private_inputs": {
+                        "value": total_selected - amount,
+                        "recipient": wallet.shielded.address,
+                    },
+                    "public_inputs": {
+                        "commitment": "00" * 32,
+                    },
                 }
-            })
+            )
 
         return {
             "type": "shielded_transfer",

@@ -31,7 +31,7 @@ class ShieldedCoinNote(BaseModel):
 
         csk_f = Fr(secret_scalar)
         index_f = Fr(self.merkle_tree_index)
-        
+
         nullifier_f = transient_hash([csk_f, index_f])
         return nullifier_f.to_bytes()
 
