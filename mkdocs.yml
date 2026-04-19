@@ -36,8 +36,13 @@ plugins:
 
 nav:
   - Home: index.md
-  - Contributing: contributing.md
+  - Getting Started: getting_started.md
+  - API Reference:
+      - Client: api/client.md
+      - Wallet: api/wallet.md
+      - Crypto: api/crypto.md
   - Specification: spec.md
+  - Contributing: contributing.md
 
 markdown_extensions:
   - admonition
@@ -46,4 +51,5 @@ markdown_extensions:
   - pymdownx.highlight:
       anchor_linenums: true
   - pymdownx.inlinehilite
-  - pymdownx.snippets
+  - pymdownx.snippets:
+      base_path: .
