@@ -1,3 +1,3 @@
 # Contributing to Noxipher
 
---8<-- "CONTRIBUTING.md"
+--8<-- "../CONTRIBUTING.md"
