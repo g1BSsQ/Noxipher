@@ -38,9 +38,16 @@ nav:
   - Home: index.md
   - Getting Started: getting_started.md
   - API Reference:
-      - Client: api/client.md
+      - Core: api/core.md
       - Wallet: api/wallet.md
-      - Crypto: api/crypto.md
+      - Cryptography: api/crypto.md
+      - Indexer: api/indexer.md
+      - Node: api/node.md
+      - Proof: api/proof.md
+      - Transactions: api/tx.md
+      - Contracts: api/contract.md
+      - Tokens: api/token.md
+      - Address: api/address.md
   - Specification: spec.md
   - Contributing: contributing.md
 

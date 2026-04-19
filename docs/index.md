@@ -11,7 +11,7 @@ Noxipher is designed to be **privacy-first** and **async-first**, giving develop
 
 ## Next Steps
 - Head over to the [Getting Started](getting_started.md) guide to install and run your first code.
-- Check out the [API Reference](api/client.md) to explore the available modules.
+- Check out the [API Reference](api/core.md) to explore the available modules.
 - Read the [Midnight Protocol Specification](spec.md) to understand the technical details behind Noxipher.
 
 ---

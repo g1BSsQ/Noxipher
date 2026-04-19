@@ -85,4 +85,4 @@ if __name__ == "__main__":
 ```
 
 ## Next Steps
-For detailed documentation on specific modules, please refer to the [API Reference](api/client.md).
+For detailed documentation on specific modules, please refer to the [API Reference](api/core.md).
