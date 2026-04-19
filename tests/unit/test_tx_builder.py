@@ -27,6 +27,7 @@ async def test_build_unshielded_transfer_with_ttl(
     mock_client: MagicMock, wallet: MidnightWallet
 ) -> None:
     builder = TransactionBuilder(mock_client)
+    mock_client.config.min_fee = 100
 
     # Mock UTXOs: 1000 and 5000. Largest First should pick 5000.
     wallet.unshielded.get_utxos = AsyncMock(

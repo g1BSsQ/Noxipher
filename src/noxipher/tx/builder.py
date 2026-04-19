@@ -42,14 +42,24 @@ class TransactionBuilder:
         Transfer NIGHT or other tokens.
         """
         if shielded:
+            # 1. Build shielded part (Zswap)
             unsigned_tx = await self._build_shielded_transfer(
                 wallet, to, amount, token_type=token_type
             )
+            # 2. Build unshielded part for fee (Midnight StandardTransaction requires fee)
+            unshielded_part = await self._build_unshielded_transfer(
+                wallet, wallet.unshielded.address, 0, fee=fee
+            )
+            # 3. Combine
+            unsigned_tx["standard"] = unshielded_part["standard"]
+            unsigned_tx["requires_unshielded_signature"] = True
+            
+            # 4. Prove
             proven_tx = await self._prove_transaction(unsigned_tx)
         else:
             # Unshielded transfers are direct and don't require the Proof Server
             proven_tx = await self._build_unshielded_transfer(
-                wallet, to, amount, token_type=token_type
+                wallet, to, amount, token_type=token_type, fee=fee
             )
 
         raw_bytes = self._serialize_transaction(proven_tx, wallet)
@@ -102,6 +112,7 @@ class TransactionBuilder:
         wallet: "MidnightWallet",
         to_address: str,
         amount: int,
+        fee: int | None = None,
         ttl: int = 1800,
         token_type: bytes = b"\x00" * 32,
     ) -> dict[str, Any]:
@@ -130,12 +141,16 @@ class TransactionBuilder:
                 eligible.append(utxo)
 
         # 4. Optimized Selection
+        # Total required including fee
+        real_fee = fee if fee is not None else self._client.config.min_fee
+        required = amount + real_fee
+
         # Step A: Try Exact Match to avoid fragmentation
         selected = []
         for utxo in eligible:
-            if int(utxo.get("value", 0)) == amount:
+            if int(utxo.get("value", 0)) == required:
                 selected = [utxo]
-                current_total = amount
+                current_total = required
                 break
         
         # Step B: Fallback to Largest First (Greedy)
@@ -146,11 +161,13 @@ class TransactionBuilder:
             for utxo in eligible:
                 selected.append(utxo)
                 current_total += int(utxo.get("value", 0))
-                if current_total >= amount:
+                if current_total >= required:
                     break
-
-        if current_total < amount:
-            raise TransactionError(f"Insufficient unshielded balance: {current_total} < {amount}")
+        
+        if current_total < required:
+            raise TransactionError(
+                f"Insufficient unshielded balance for amount+fee: {current_total} < {required}"
+            )
 
         # 3. Create Inputs (UtxoSpend)
         inputs = []
@@ -174,10 +191,10 @@ class TransactionBuilder:
         # Recipient output
         outputs.append({"value": amount, "owner": recipient_bytes, "type_": 0})
         # Change output
-        if current_total > amount:
+        if current_total > required:
             outputs.append(
                 {
-                    "value": current_total - amount,
+                    "value": current_total - required,
                     "owner": wallet.unshielded.public_key,
                     "type_": 0,
                 }
@@ -412,6 +429,40 @@ class TransactionBuilder:
                 "binding_randomness": b"\x00" * 32,
             }
             tx_data["standard"] = stx
+        elif tx_data.get("type") == "shielded_transfer":
+            # Bug 1 Fix: Ensure StandardTransaction exists and integrate proofs
+            if "standard" not in tx_data:
+                # Create default envelope if missing (though transfer() now provides it)
+                tx_data["standard"] = {
+                    "network_id": self._client.config.name,
+                    "intents": {
+                        "0": {
+                            "guaranteed_unshielded_offer": {
+                                "inputs": [],
+                                "outputs": [],
+                                "signatures": [],
+                            },
+                            "ttl": 1800,
+                            "actions": [],
+                            "binding_commitment": b"\x00" * 32,
+                        }
+                    },
+                    "binding_randomness": b"\x00" * 32,
+                }
+            
+            # Integrate proofs into shielded_offer of intent 0
+            offer = {
+                "spend_proofs": [bytes.fromhex(p) if isinstance(p, str) else p 
+                                for p in tx_data.get("proof_hexes", {}).get("spends", [])],
+                "output_proofs": [bytes.fromhex(p) if isinstance(p, str) else p 
+                                 for p in tx_data.get("proof_hexes", {}).get("outputs", [])],
+                "zswap_memos": [], 
+                "merkle_root": tx_data.get("merkle_root", b"\x00" * 32),
+            }
+            tx_data["standard"]["intents"]["0"]["shielded_offer"] = offer
+        elif tx_data.get("type") == "unshielded_transfer" and "standard" not in tx_data:
+            # Should not happen with new orchestration
+            pass
 
         # 1. Handle unshielded signing if needed
         if tx_data.get("requires_unshielded_signature"):

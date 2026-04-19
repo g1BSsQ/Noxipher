@@ -495,11 +495,11 @@ def serialize_contract_args(args: object) -> bytes:
             buf.extend(serialize_contract_args(item))
         return bytes(buf)
     if isinstance(args, dict):
-        # For dicts/structs, we sort by key to ensure deterministic serialization
+        # For dicts/structs, we use insertion order to match Compact declaration order
         buf = bytearray(encode_scale_int(len(args)))
-        for k in sorted(args.keys()):
+        for k, v in args.items():
             buf.extend(serialize_contract_args(k))
-            buf.extend(serialize_contract_args(args[k]))
+            buf.extend(serialize_contract_args(v))
         return bytes(buf)
 
     raise ValueError(f"Unsupported contract argument type: {type(args)}")
