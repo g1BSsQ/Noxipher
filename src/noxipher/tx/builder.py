@@ -368,6 +368,7 @@ class TransactionBuilder:
         from noxipher.tx.scale import (
             MidnightTransactionSerializer,
             get_unshielded_signing_payload,
+            serialize_contract_args,
             serialize_transaction,
         )
 

@@ -1,4 +1,8 @@
-from noxipher.tx.scale import serialize_contract_action, serialize_contract_args, serialize_zswap_offer
+from noxipher.tx.scale import (
+    serialize_contract_action,
+    serialize_contract_args,
+    serialize_zswap_offer,
+)
 
 
 def test_serialize_contract_call() -> None:

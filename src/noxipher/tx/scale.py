@@ -473,7 +473,7 @@ def serialize_zswap_offer(offer: dict[str, Any] | bytes) -> bytes:
     return tagged_serialize("zswap-offer[v1]", bytes(payload))
 
 
-def serialize_contract_args(args: Any) -> bytes:
+def serialize_contract_args(args: object) -> bytes:
     """
     Serialize contract arguments using Midnight's Compact-compatible format.
     Handles basic types and nested structures.
