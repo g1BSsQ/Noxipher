@@ -6,6 +6,7 @@ class PersistentHashWriter:
     A SHA-256 based hasher.
     Matches Midnight's PersistentHashWriter in base-crypto.
     """
+
     def __init__(self) -> None:
         self.hasher = hashlib.sha256()
 
@@ -15,11 +16,13 @@ class PersistentHashWriter:
     def finalize(self) -> bytes:
         return self.hasher.digest()
 
+
 def persistent_hash(data: bytes) -> bytes:
     """One-off SHA-256 hash."""
     writer = PersistentHashWriter()
     writer.update(data)
     return writer.finalize()
+
 
 def sample_bytes(length: int, domain_separator: bytes, seed: bytes) -> bytes:
     """
@@ -45,16 +48,19 @@ def sample_bytes(length: int, domain_separator: bytes, seed: bytes) -> bytes:
         bytes_to_add = min(32, length - len(result))
         result.extend(round_hash[:bytes_to_add])
         round_idx += 1
-    
+
     return bytes(result)
+
 
 def blake2_256(data: bytes) -> bytes:
     """Blake2b 256-bit hash."""
     return hashlib.blake2b(data, digest_size=32).digest()
 
+
 def sha256(data: bytes) -> bytes:
     """SHA-256 hash."""
     return hashlib.sha256(data).digest()
+
 
 def ripemd160(data: bytes) -> bytes:
     """RIPEMD-160 hash."""
@@ -62,12 +68,16 @@ def ripemd160(data: bytes) -> bytes:
     h.update(data)
     return h.digest()
 
+
 def hmac_sha256(key: bytes, data: bytes) -> bytes:
     """HMAC-SHA256."""
     import hmac
+
     return hmac.new(key, data, hashlib.sha256).digest()
+
 
 def hmac_sha512(key: bytes, data: bytes) -> bytes:
     """HMAC-SHA512."""
     import hmac
+
     return hmac.new(key, data, hashlib.sha512).digest()

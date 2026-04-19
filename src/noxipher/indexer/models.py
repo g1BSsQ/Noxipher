@@ -11,6 +11,7 @@ from pydantic import BaseModel, field_validator
 
 class Block(BaseModel):
     """Block data from Indexer."""
+
     height: int
     hash: str
     parent_hash: str | None = None
@@ -56,4 +57,3 @@ class DustGenerationStatus(BaseModel):
     is_registered: bool
     available_dust: str  # Bigint as string (Specks)
     registered_utxos: list[dict[str, Any]] = []
-

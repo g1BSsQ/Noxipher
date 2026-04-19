@@ -104,5 +104,3 @@ class Keystore:
     def load(path: Path) -> dict[str, Any]:
         """Load keystore from file."""
         return cast(dict[str, Any], json.loads(path.read_text()))
-
-

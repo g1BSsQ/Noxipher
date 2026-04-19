@@ -19,7 +19,6 @@ from pydantic import BaseModel
 
 
 class TransactionReceipt(BaseModel):
-
     """Result of a submitted transaction."""
 
     hash: str

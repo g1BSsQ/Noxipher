@@ -81,7 +81,6 @@ class ShieldedWallet:
         await indexer.disconnect_wallet_session(session_id)
 
     async def sync_coins(self, indexer: IndexerClient, session_id: str) -> list[dict[str, Any]]:
-
         """Stream shielded transactions, collect unspent coins."""
         coins = []
         async for event in indexer.subscribe_shielded_transactions(session_id):

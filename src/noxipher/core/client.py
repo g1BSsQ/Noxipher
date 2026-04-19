@@ -34,7 +34,6 @@ class NoxipherClient:
         self.proof = ProofServerClient(self.config.proof_server_url)
         self.tx = TransactionBuilder(self)
 
-
     async def __aenter__(self) -> "NoxipherClient":
         await self.connect()
         return self
@@ -60,7 +59,7 @@ class NoxipherClient:
     async def check_health(self) -> ServiceHealth:
         """Checks the health of all network components."""
         node_health = await self.node.get_health()
-        
+
         try:
             proof_health = await self.proof.health()
         except Exception:
@@ -75,7 +74,6 @@ class NoxipherClient:
 
         status = HealthStatus.OK if (node_health and indexer_ok) else HealthStatus.DOWN
 
-
         return ServiceHealth(
             status=status,
             node_connected=node_health is not None,
@@ -83,7 +81,6 @@ class NoxipherClient:
             proof_server_connected="version" in proof_health or proof_health.get("status") == "ok",
             details={"node": node_health, "proof_server": proof_health},
         )
-
 
     async def get_balance(self, wallet: "MidnightWallet") -> dict[str, int]:
         """Gets the unshielded balance of the given wallet."""

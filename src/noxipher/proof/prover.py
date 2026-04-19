@@ -18,7 +18,6 @@ class ZKProver:
     async def prove_transaction(
         self, unsigned_tx: UnsignedTransaction | dict[str, Any]
     ) -> ProvenTransaction:
-
         """
         Prove all ZK circuits in a transaction.
 
@@ -48,7 +47,6 @@ class ZKProver:
                 signing_payload_hex=tx.signing_payload_hex,
             )
 
-
         proof_hexes = []
         for circuit in circuits:
             circuit_id = circuit["id"]
@@ -72,4 +70,3 @@ class ZKProver:
             requires_unshielded_signature=tx.requires_unshielded_signature,
             signing_payload_hex=tx.signing_payload_hex,
         )
-

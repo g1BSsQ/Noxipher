@@ -157,5 +157,5 @@ NOXIPHER_SPEC*.md
 .DS_Store
 *.swp
 
-
-
+# External dependencies (not submodules)
+/external/

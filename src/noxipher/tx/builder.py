@@ -85,7 +85,6 @@ class TransactionBuilder:
         except Exception as e:
             raise TransactionError(f"Invalid recipient address: {e}") from e
 
-
         # 2. Fetch and select UTXOs
         utxos = await wallet.unshielded.get_utxos(self._client.indexer)
         selected = []
@@ -94,7 +93,6 @@ class TransactionBuilder:
             # Only use NIGHT tokens (all zeros)
             token_type = utxo.get("token_type", "00" * 32)
             if isinstance(token_type, dict):
-
                 token_type = token_type.get("hex", "00" * 32)
 
             if token_type == "00" * 32:
@@ -188,7 +186,6 @@ class TransactionBuilder:
         prover = ZKProver(self._client.proof)
         proven = await prover.prove_transaction(tx)
         return proven.model_dump()
-
 
     def _serialize_transaction(self, tx_data: dict[str, Any], wallet: "MidnightWallet") -> bytes:
         """Serialize transaction to raw bytes with signing."""

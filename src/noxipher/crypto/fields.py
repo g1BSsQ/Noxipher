@@ -3,6 +3,7 @@ from typing import TypeVar
 
 T = TypeVar("T", bound="FieldElement")
 
+
 class FieldElement(abc.ABC):
     MODULUS: int
     value: int
@@ -61,13 +62,18 @@ class FieldElement(abc.ABC):
         """Wide reduction for field elements (e.g. from 64 bytes)."""
         return cls(int.from_bytes(data, "little"))
 
+
 class Fr(FieldElement):
     """BLS12-381 Scalar Field (often called Fq in Midnight internal circuit code)."""
-    MODULUS = 0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001
+
+    MODULUS = 0x73EDA753299D7D483339D80809A1D80553BDA402FFFE5BFEFFFFFFFF00000001
+
 
 class EmbeddedFr(FieldElement):
     """JubJub Scalar Field."""
-    MODULUS = 0x0e7db4ea6533afa906673b0101343b00a6682093ccc81082d0970e5ed6f72cb7
+
+    MODULUS = 0x0E7DB4EA6533AFA906673B0101343B00A6682093CCC81082D0970E5ED6F72CB7
+
 
 # Alias for clarity in Poseidon
 PoseidonField = Fr

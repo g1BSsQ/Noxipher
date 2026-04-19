@@ -88,7 +88,6 @@ class DustWallet:
     async def register_night_utxos(
         self,
         utxos: list[dict[str, Any]],
-
         tx_builder: TransactionBuilder,
         unshielded_wallet: UnshieldedWallet,
     ) -> str:

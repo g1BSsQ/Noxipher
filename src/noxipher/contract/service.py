@@ -15,7 +15,6 @@ if TYPE_CHECKING:
     from noxipher.wallet.wallet import MidnightWallet
 
 
-
 class ContractService:
     """Service for deploying and interacting with Compact contracts."""
 
@@ -31,7 +30,6 @@ class ContractService:
         contract: CompactContract,
         wallet: MidnightWallet,
         initial_state: dict[str, Any] | None = None,
-
     ) -> ContractInstance:
         """
         Deploy a contract to the network.

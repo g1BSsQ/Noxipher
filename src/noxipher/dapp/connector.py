@@ -43,7 +43,6 @@ class DAppConnector:
     async def balance_transaction(
         self, unbound_tx: dict[str, Any], ttl_seconds: int = DEFAULT_TTL_SECONDS
     ) -> dict[str, Any]:
-
         """
         Balance unbound transaction — add inputs/outputs to cover fees.
 
@@ -55,13 +54,11 @@ class DAppConnector:
         )
 
     async def submit_transaction(self, finalized_tx: dict[str, Any]) -> str:
-
         """Submit finalized transaction → tx hash."""
         raw_bytes = self._client.tx._serialize_transaction(finalized_tx, self._wallet)
         return await self._client.node.submit_extrinsic(raw_bytes)
 
     def as_provider_dict(self) -> dict[str, Any]:
-
         """
         Return provider dict compatible with Midnight.js contracts API.
 

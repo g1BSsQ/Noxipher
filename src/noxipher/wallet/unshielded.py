@@ -50,7 +50,6 @@ class UnshieldedWallet:
         return self._signer.as_substrate_keypair()
 
     async def get_utxos(self, indexer: IndexerClient) -> list[dict[str, Any]]:
-
         """
         Get UTxO set from Indexer using optimized query.
         """

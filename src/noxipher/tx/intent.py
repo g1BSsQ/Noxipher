@@ -15,7 +15,6 @@ class ContractCallPrototype(BaseModel):
     args: dict[str, Any] = {}
 
 
-
 class Intent(BaseModel):
     """Contract call intent — fallible segment."""
 

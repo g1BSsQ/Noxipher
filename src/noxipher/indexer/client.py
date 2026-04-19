@@ -44,11 +44,9 @@ class IndexerClient:
         await self._http_client.__aenter__()  # type: ignore[no-untyped-call]
         return self
 
-
     async def __aexit__(self, *args: object) -> None:
         if self._http_client:
             await self._http_client.__aexit__(*args)  # type: ignore[no-untyped-call]
-
 
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(min=1, max=10))
     async def get_block(self, height: int | None = None, hash_hex: str | None = None) -> Block:
@@ -156,7 +154,6 @@ class IndexerClient:
         data = result
         return [DustGenerationStatus.model_validate(d) for d in data["dustStatus"]]
 
-
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(min=1, max=10))
     async def get_utxos(self, address: str) -> list[dict[str, Any]]:
         """Get unshielded UTXOs for an address."""
@@ -168,7 +165,6 @@ class IndexerClient:
             )
             data = result
             return cast(list[dict[str, Any]], data["unshieldedUtxos"]["nodes"])
-
 
         except Exception as e:
             raise IndexerError(f"get_utxos failed: {e}") from e

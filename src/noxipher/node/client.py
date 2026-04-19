@@ -101,7 +101,6 @@ class NodeClient:
             return None
 
     async def get_chain_name(self) -> str:
-
         """Verify connected to correct chain (e.g., 'Midnight Devnet')."""
         self._require_connection()
         result = await asyncio.to_thread(
@@ -163,7 +162,6 @@ class NodeClient:
             params,
         )
         return dict(result.get("result", {}))
-
 
     async def submit_extrinsic(self, raw_tx_bytes: bytes) -> str:
         """
@@ -248,7 +246,6 @@ class NodeClient:
             [],
         )
         return list(result.get("result", []))
-
 
     async def get_contract_state(
         self, contract_address_hex: str, block_hash: str | None = None
@@ -351,4 +348,3 @@ class NodeClient:
             raise ValueError(f"Cannot find {pallet_name}.{call_name} in metadata")
         except Exception as e:
             raise ConnectionError(f"Failed to get pallet call index: {e}") from e
-

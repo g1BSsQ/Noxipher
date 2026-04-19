@@ -51,4 +51,3 @@ class WalletSyncer:
             "unshielded": unshielded,
             "network": str(self._wallet.network),
         }
-

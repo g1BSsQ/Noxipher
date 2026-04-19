@@ -14,7 +14,6 @@ if TYPE_CHECKING:
     from noxipher.wallet.wallet import MidnightWallet
 
 
-
 class ContractInstance:
     """
     Deployed contract on Midnight network.
@@ -42,7 +41,6 @@ class ContractInstance:
         args: dict[str, Any] | None = None,
         wallet: MidnightWallet | None = None,
     ) -> dict[str, Any]:
-
         """
         Call contract entry point.
 
@@ -64,7 +62,6 @@ class ContractInstance:
             return await self._call_pure(entry_point, args or {})
 
     async def _call_pure(self, entry_point: str, args: dict[str, Any]) -> dict[str, Any]:
-
         """Query contract state (no transaction)."""
         state = await self._client.indexer.get_transactions(address=self._address, limit=1)
         return {"result": state, "tx_hash": None}
@@ -72,8 +69,6 @@ class ContractInstance:
     async def _call_impure(
         self, entry_point: str, args: dict[str, Any], wallet: MidnightWallet
     ) -> dict[str, Any]:
-
-
         """Call impure entry point → transaction."""
         tx_receipt = await self._client.tx.call_contract(
             wallet=wallet,

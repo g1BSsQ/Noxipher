@@ -18,7 +18,8 @@ if TYPE_CHECKING:
     pass
 
 # JubJub subgroup order
-JUBJUB_ORDER = 0x0e7db4ea6533afa906673b0101343b00a6682093ccc81082d0970e5ed6f72cb7
+JUBJUB_ORDER = 0x0E7DB4EA6533AFA906673B0101343B00A6682093CCC81082D0970E5ED6F72CB7
+
 
 class ZswapSecretKeys:
     """
@@ -104,7 +105,7 @@ class DustSecretKey:
         """
         if len(seed) != 32:
             raise ValueError("Seed must be 32 bytes")
-        
+
         dsk_bytes = sample_bytes(64, b"midnight:dsk", seed)
         sk = Fr.from_uniform_bytes(dsk_bytes)
         return cls(sk)
@@ -117,10 +118,10 @@ class DustSecretKey:
         """
         # "mdn:dust:pk" (11 bytes) as a field element
         domain_f = Fr.from_le_bytes(b"mdn:dust:pk")
-        
+
         # sk as Fr
         sk_f = self._sk
-        
+
         pk_f = transient_hash([domain_f, sk_f])
         return pk_f.to_bytes()
 
@@ -136,20 +137,20 @@ def hash_to_field(data: bytes) -> Fr:
     """
     # Midnight represents [u8] in field as chunks of 31 bytes (FR_BYTES_STORED).
     # For small strings like domain separators, it's just Fr(data_le).
-    
+
     # preimage = b"midnight:field_hash".field_repr() + data.field_repr()
     preimage = []
-    
+
     # "midnight:field_hash" (19 bytes)
     preimage.append(Fr.from_le_bytes(b"midnight:field_hash"))
-    
+
     # data
     # We simplify for data < 31 bytes which is the case for our domains
     if len(data) > 31:
         # Full implementation would chunk it LE
         raise NotImplementedError("hash_to_field for large data not implemented")
     preimage.append(Fr.from_le_bytes(data))
-    
+
     return transient_hash(preimage)
 
 
@@ -166,12 +167,12 @@ def coin_commitment(
     """
     writer = PersistentHashWriter()
     writer.update(b"midnight:zswap-cc[v1]")
-    writer.update(nonce)        # 32 bytes
-    writer.update(token_type)   # 32 bytes
-    writer.update(value.to_bytes(16, "little")) # u128 LE
-    
+    writer.update(nonce)  # 32 bytes
+    writer.update(token_type)  # 32 bytes
+    writer.update(value.to_bytes(16, "little"))  # u128 LE
+
     # Recipient
     writer.update(b"\x01" if recipient_is_user else b"\x00")
     writer.update(recipient_hash)
-    
+
     return writer.finalize()

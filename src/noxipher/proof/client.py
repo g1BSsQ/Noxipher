@@ -92,4 +92,3 @@ class ProofServerClient:
             return resp.content
         except httpx.HTTPError as e:
             raise ProofError(f"Failed to get proving key for {circuit_id}: {e}") from e
-

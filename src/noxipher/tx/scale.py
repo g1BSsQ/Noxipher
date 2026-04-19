@@ -449,7 +449,6 @@ def serialize_intent_fields(intent: dict[str, Any]) -> bytes:
 
 
 def get_unshielded_signing_payload(segment_id: int, intent: dict[str, Any]) -> bytes:
-
     """
     Generate the bytes that need to be signed by the unshielded wallet.
     Prefix: 'midnight:hash-intent:'
