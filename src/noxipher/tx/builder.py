@@ -81,10 +81,10 @@ class TransactionBuilder:
         self,
         wallet: "MidnightWallet",
         bytecode: bytes,
-        initial_state: bytes = b"",
+        initial_state: dict[str, Any] | bytes = b"",
     ) -> "TransactionReceipt":
         """Deploy a new smart contract."""
-        unsigned_tx = {
+        unsigned_tx: dict[str, Any] = {
             "type": "contract_deploy",
             "bytecode": bytecode,
             "initial_state": initial_state,
