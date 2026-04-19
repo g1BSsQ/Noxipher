@@ -43,7 +43,7 @@ class ContractService:
         receipt = await self._client.tx.deploy_contract(
             wallet=wallet,
             bytecode=bytecode,
-            initial_state=b"" # TODO: Serialize initial_state if provided
+            initial_state=initial_state or {},
         )
         
         # Address is usually derived or returned in receipt

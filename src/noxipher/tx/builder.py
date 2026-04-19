@@ -129,16 +129,25 @@ class TransactionBuilder:
             if u_token == token_type.hex():
                 eligible.append(utxo)
 
-        # Sort descending by value to minimize inputs
-        eligible.sort(key=lambda x: int(x.get("value", 0)), reverse=True)
-
+        # 4. Optimized Selection
+        # Step A: Try Exact Match to avoid fragmentation
         selected = []
-        current_total = 0
         for utxo in eligible:
-            selected.append(utxo)
-            current_total += int(utxo.get("value", 0))
-            if current_total >= amount:
+            if int(utxo.get("value", 0)) == amount:
+                selected = [utxo]
+                current_total = amount
                 break
+        
+        # Step B: Fallback to Largest First (Greedy)
+        if not selected:
+            # Sort descending by value to minimize inputs
+            eligible.sort(key=lambda x: int(x.get("value", 0)), reverse=True)
+            current_total = 0
+            for utxo in eligible:
+                selected.append(utxo)
+                current_total += int(utxo.get("value", 0))
+                if current_total >= amount:
+                    break
 
         if current_total < amount:
             raise TransactionError(f"Insufficient unshielded balance: {current_total} < {amount}")
@@ -368,7 +377,7 @@ class TransactionBuilder:
             action = {
                 "type": "deploy",
                 "bytecode": tx_data["bytecode"],
-                "initial_state": tx_data["initial_state"],
+                "initial_state": serialize_contract_args(tx_data.get("initial_state", b"")),
             }
             intent = {
                 "guaranteed_unshielded_offer": {"inputs": [], "outputs": [], "signatures": []},
@@ -388,7 +397,7 @@ class TransactionBuilder:
                 "type": "call",
                 "address": bytes.fromhex(tx_data["contract_address"]),
                 "entry_point": tx_data["entry_point"],
-                "args": b"",  # TODO: Serialize args
+                "args": serialize_contract_args(tx_data.get("args", b"")),
             }
             intent = {
                 "guaranteed_unshielded_offer": {"inputs": [], "outputs": [], "signatures": []},

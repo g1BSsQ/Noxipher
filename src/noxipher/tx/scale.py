@@ -195,6 +195,11 @@ def serialize_u128(value: int) -> bytes:
     return ScaleBigInt.from_u128(value).serialize()
 
 
+def encode_scale_int(value: int) -> bytes:
+    """Generic ScaleBigInt encoder for integers."""
+    return ScaleBigInt.from_u128(value).serialize()
+
+
 def serialize_le_u8(value: int) -> bytes:
     """u8 → little-endian (via_le_bytes! in util.rs)."""
     return bytes([value & 0xFF])
@@ -207,6 +212,11 @@ def serialize_le_u16(value: int) -> bytes:
 def serialize_bytes_fixed(data: bytes) -> bytes:
     """[u8; N] → raw bytes (no length prefix)."""
     return data
+
+
+def serialize_bytes(data: bytes) -> bytes:
+    """Bytes → length (ScaleBigInt u32) + raw bytes."""
+    return serialize_u32(len(data)) + data
 
 
 def serialize_vec(items: list[bytes]) -> bytes:
@@ -420,24 +430,79 @@ def serialize_zswap_offer(offer: dict[str, Any] | bytes) -> bytes:
     payload += bytes([0])  # Discriminant
 
     # ShieldedOffer: spend_proofs (Vec<Proof>), output_proofs (Vec<Proof>), etc.
-    # In Noxipher, we might pass pre-serialized parts or the full offer dict
     if "raw_payload" in offer:
         payload += offer["raw_payload"]
     else:
-        # Complex nested serialization - for now handle common fields
         # spend_proofs: Vec<Proof>
-        spends = offer.get("spends", [])
-        payload += serialize_u32(len(spends))
+        spends = offer.get("spend_proofs", offer.get("spends", []))
+        payload += encode_scale_int(len(spends))
         for s in spends:
-            payload += s  # Proof bytes
+            if isinstance(s, bytes):
+                payload += serialize_bytes(s)
+            elif isinstance(s, dict) and "proof" in s:
+                payload += serialize_bytes(bytes.fromhex(s["proof"]))
+            else:
+                payload += serialize_bytes(b"")
 
         # output_proofs: Vec<Proof>
-        outputs = offer.get("outputs", [])
-        payload += serialize_u32(len(outputs))
+        outputs = offer.get("output_proofs", offer.get("outputs", []))
+        payload += encode_scale_int(len(outputs))
         for o in outputs:
-            payload += o  # Proof bytes
+            if isinstance(o, bytes):
+                payload += serialize_bytes(o)
+            elif isinstance(o, dict) and "proof" in o:
+                payload += serialize_bytes(bytes.fromhex(o["proof"]))
+            else:
+                payload += serialize_bytes(b"")
+
+        # zswap_memos: Vec<Memo> (64 bytes each)
+        memos = offer.get("zswap_memos", offer.get("memos", []))
+        payload += encode_scale_int(len(memos))
+        for m in memos:
+            if isinstance(m, bytes):
+                payload += m[:64].ljust(64, b"\x00")
+            else:
+                payload += b"\x00" * 64
+
+        # merkle_root: [u8; 32]
+        root = offer.get("merkle_root", b"\x00" * 32)
+        if isinstance(root, str):
+            root = bytes.fromhex(root)
+        payload += root[:32].ljust(32, b"\x00")
 
     return tagged_serialize("zswap-offer[v1]", bytes(payload))
+
+
+def serialize_contract_args(args: Any) -> bytes:
+    """
+    Serialize contract arguments using Midnight's Compact-compatible format.
+    Handles basic types and nested structures.
+    """
+    if args is None:
+        return b""
+    if isinstance(args, bytes):
+        return serialize_bytes(args)
+    if isinstance(args, str):
+        return serialize_bytes(args.encode())
+    if isinstance(args, bool):
+        return b"\x01" if args else b"\x00"
+    if isinstance(args, int):
+        return encode_scale_int(args)
+    if isinstance(args, list):
+        # Vec<T> format: length + serialized items
+        buf = bytearray(encode_scale_int(len(args)))
+        for item in args:
+            buf.extend(serialize_contract_args(item))
+        return bytes(buf)
+    if isinstance(args, dict):
+        # For dicts/structs, we sort by key to ensure deterministic serialization
+        buf = bytearray(encode_scale_int(len(args)))
+        for k in sorted(args.keys()):
+            buf.extend(serialize_contract_args(k))
+            buf.extend(serialize_contract_args(args[k]))
+        return bytes(buf)
+
+    raise ValueError(f"Unsupported contract argument type: {type(args)}")
 
 
 def serialize_contract_action(action: dict[str, Any] | bytes) -> bytes:
