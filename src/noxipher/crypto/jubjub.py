@@ -179,10 +179,10 @@ def coin_commitment(
 
 
 def compute_binding_commitment(randomness: bytes, value: int = 0) -> bytes:
-    \"\"\"
+    """
     Compute Pedersen binding commitment: G^randomness * H^value.
     Ensures cryptographic binding between public value balance and ZK proofs.
-    \"\"\"
+    """
     r_scalar = EmbeddedFr.from_le_bytes(randomness)
 
     # G generator
