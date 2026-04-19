@@ -12,6 +12,7 @@ Flow (CONFIRMED from Counter CLI source, Apr 2026):
 """
 
 import asyncio
+import secrets
 from typing import TYPE_CHECKING, Any
 
 from noxipher.core.exceptions import TransactionError, TransactionTimeoutError
@@ -34,17 +35,22 @@ class TransactionBuilder:
         to: str,
         amount: int,
         shielded: bool = False,
+        token_type: bytes = b"\x00" * 32,
         fee: int | None = None,
     ) -> "TransactionReceipt":
         """
-        Transfer NIGHT tokens.
+        Transfer NIGHT or other tokens.
         """
         if shielded:
-            unsigned_tx = await self._build_shielded_transfer(wallet, to, amount)
+            unsigned_tx = await self._build_shielded_transfer(
+                wallet, to, amount, token_type=token_type
+            )
             proven_tx = await self._prove_transaction(unsigned_tx)
         else:
             # Unshielded transfers are direct and don't require the Proof Server
-            proven_tx = await self._build_unshielded_transfer(wallet, to, amount)
+            proven_tx = await self._build_unshielded_transfer(
+                wallet, to, amount, token_type=token_type
+            )
 
         raw_bytes = self._serialize_transaction(proven_tx, wallet)
         tx_hash = await self._client.node.submit_extrinsic(raw_bytes)
@@ -72,10 +78,15 @@ class TransactionBuilder:
         return await self._wait_for_receipt(tx_hash)
 
     async def _build_unshielded_transfer(
-        self, wallet: "MidnightWallet", to_address: str, amount: int, ttl: int = 1800
+        self,
+        wallet: "MidnightWallet",
+        to_address: str,
+        amount: int,
+        ttl: int = 1800,
+        token_type: bytes = b"\x00" * 32,
     ) -> dict[str, Any]:
         """
-        Build unsigned unshielded transfer with UTXO selection.
+        Build unsigned unshielded transfer with optimized UTXO selection (Largest First).
         """
         from noxipher.address.bech32m import decode_address
 
@@ -85,21 +96,29 @@ class TransactionBuilder:
         except Exception as e:
             raise TransactionError(f"Invalid recipient address: {e}") from e
 
-        # 2. Fetch and select UTXOs
+        # 2. Fetch UTXOs
         utxos = await wallet.unshielded.get_utxos(self._client.indexer)
+
+        # 3. Optimized Selection: Filter by token type and sort by value (Largest First)
+        eligible = []
+        for utxo in utxos:
+            u_token = utxo.get("token_type") or utxo.get("tokenType") or ("00" * 32)
+            if isinstance(u_token, dict):
+                u_token = u_token.get("hex", "00" * 32)
+
+            if u_token == token_type.hex():
+                eligible.append(utxo)
+
+        # Sort descending by value to minimize inputs
+        eligible.sort(key=lambda x: int(x.get("value", 0)), reverse=True)
+
         selected = []
         current_total = 0
-        for utxo in utxos:
-            # Only use NIGHT tokens (all zeros)
-            token_type = utxo.get("token_type", "00" * 32)
-            if isinstance(token_type, dict):
-                token_type = token_type.get("hex", "00" * 32)
-
-            if token_type == "00" * 32:
-                selected.append(utxo)
-                current_total += int(utxo.get("value", 0))
-                if current_total >= amount:
-                    break
+        for utxo in eligible:
+            selected.append(utxo)
+            current_total += int(utxo.get("value", 0))
+            if current_total >= amount:
+                break
 
         if current_total < amount:
             raise TransactionError(f"Insufficient unshielded balance: {current_total} < {amount}")
@@ -165,31 +184,43 @@ class TransactionBuilder:
         }
 
     async def _build_shielded_transfer(
-        self, wallet: "MidnightWallet", to: str, amount: int, ttl: int = 1800
+        self,
+        wallet: "MidnightWallet",
+        to: str,
+        amount: int,
+        ttl: int = 1800,
+        token_type: bytes = b"\x00" * 32,
     ) -> dict[str, Any]:
         """
         Build unsigned shielded transfer.
 
         Logic:
-        1. Select shielded coins from Zswap state.
+        1. Select shielded coins (Largest First).
         2. Extract witnesses (Merkle proofs).
         3. Create Zswap circuits (spend + output).
         4. Structure payload for Proof Server.
         """
-        # 1. Select coins (simplified: take first enough)
+        # 1. Select coins (Largest First)
         coins = wallet.shielded_state.unspent_coins
+
+        # Filter by token type
+        eligible = [c for c in coins if c.token_type == token_type]
+
+        # Sort descending by value to minimize spend circuits
+        eligible.sort(key=lambda x: x.value, reverse=True)
+
         selected = []
         total_selected = 0
-        for coin in coins:
-            # For now, only support NIGHT (empty token type)
-            if coin.token_type == b"\x00" * 32:
-                selected.append(coin)
-                total_selected += coin.value
-                if total_selected >= amount:
-                    break
+        for coin in eligible:
+            selected.append(coin)
+            total_selected += coin.value
+            if total_selected >= amount:
+                break
 
         if total_selected < amount:
-            raise TransactionError(f"Insufficient shielded balance: {total_selected} < {amount}")
+            raise TransactionError(
+                f"Insufficient shielded balance: {total_selected} < {amount}"
+            )
 
         # 2. Extract witnesses and create circuits
         # In Midnight, each spend and each output is a separate circuit.
@@ -227,15 +258,14 @@ class TransactionBuilder:
 
         # Output circuit (recipient)
         # commitment = hash(token_type, value, recipient_pk, nonce)
-        # Simplified for NIGHT token
-        out_nonce = b"\x01" * 32  # Should be random in production
+        out_nonce = secrets.token_bytes(32)
         _, _, recipient_payload = decode_address(to)
         # Shielded payload is 64 bytes: coinPK (32) + encPK (32)
         recipient_coin_pk = recipient_payload[:32]
 
         out_commitment = transient_hash(
             [
-                Fr.from_le_bytes(b"\x00" * 32),  # Token type (NIGHT)
+                Fr.from_le_bytes(token_type),
                 Fr(amount),
                 Fr.from_le_bytes(recipient_coin_pk),
                 Fr.from_le_bytes(out_nonce),
@@ -258,13 +288,13 @@ class TransactionBuilder:
 
         # Change output if needed
         if total_selected > amount:
-            change_nonce = b"\x02" * 32
+            change_nonce = secrets.token_bytes(32)
             change_val = total_selected - amount
             own_pk = wallet.shielded._keys.coin_public_key
 
             change_commitment = transient_hash(
                 [
-                    Fr.from_le_bytes(b"\x00" * 32),
+                    Fr.from_le_bytes(token_type),
                     Fr(change_val),
                     Fr.from_le_bytes(own_pk),
                     Fr.from_le_bytes(change_nonce),

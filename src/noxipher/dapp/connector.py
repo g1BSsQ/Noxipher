@@ -77,19 +77,32 @@ class DAppConnector:
         required = outputs_val + fee
 
         if inputs_val < required:
-            # 4. Fetch and add more UTXOs
+            # 4. Fetch and add more UTXOs (Largest First)
             utxos = await self._wallet.unshielded.get_utxos(self._client.indexer)
-            added_val = 0
 
-            # Filter out already used UTXOs
+            # Filter by token type (NIGHT is 0 in StandardTransaction) and unused
             used_outpoints = {(i["intent_hash"].hex(), i["output_no"]) for i in offer["inputs"]}
 
+            eligible = []
             for utxo in utxos:
                 i_hash = utxo.get("intentHash") or utxo.get("intent_hash") or ("00" * 32)
                 o_no = utxo.get("outputNo") or utxo.get("output_no") or 0
 
-                if (i_hash, o_no) in used_outpoints:
-                    continue
+                # Check token type (NIGHT is all zeros)
+                u_token = utxo.get("token_type") or utxo.get("tokenType") or ("00" * 32)
+                if isinstance(u_token, dict):
+                    u_token = u_token.get("hex", "00" * 32)
+
+                if (i_hash, o_no) not in used_outpoints and u_token == ("00" * 32):
+                    eligible.append(utxo)
+
+            # Sort descending by value to minimize inputs
+            eligible.sort(key=lambda x: int(x.get("value", 0)), reverse=True)
+
+            added_val = 0
+            for utxo in eligible:
+                i_hash = utxo.get("intentHash") or utxo.get("intent_hash") or ("00" * 32)
+                o_no = utxo.get("outputNo") or utxo.get("output_no") or 0
 
                 offer["inputs"].append(
                     {

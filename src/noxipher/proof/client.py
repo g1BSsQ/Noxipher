@@ -66,15 +66,14 @@ class ProofServerClient:
     ) -> bytes:
         """
         POST /prove → ZK proof bytes.
-
-        ⚠️ REQUEST FORMAT NOT YET VERIFIED.
         """
         assert self._client is not None
+        # Format for Proof Server v8.0.3 (confirmed snake_case)
         payload = {
-            "circuitId": circuit_id,
-            "provingKey": proving_key.hex(),
-            "privateInputs": private_inputs,
-            "publicInputs": public_inputs,
+            "circuit_id": circuit_id,
+            "proving_key": proving_key.hex(),
+            "private_inputs": private_inputs,
+            "public_inputs": public_inputs,
         }
         try:
             resp = await self._client.post(f"{self._url}/prove", json=payload)

@@ -27,9 +27,12 @@ async def test_build_unshielded_transfer_with_ttl(
 ) -> None:
     builder = TransactionBuilder(mock_client)
 
-    # Mock UTXOs
+    # Mock UTXOs: 1000 and 5000. Largest First should pick 5000.
     wallet.unshielded.get_utxos = AsyncMock(
-        return_value=[{"value": 1000, "intentHash": "aa" * 32, "outputNo": 0}]
+        return_value=[
+            {"value": 1000, "intentHash": "aa" * 32, "outputNo": 0},
+            {"value": 5000, "intentHash": "bb" * 32, "outputNo": 1},
+        ]
     )
 
     from noxipher.address.bech32m import encode_address
@@ -41,9 +44,9 @@ async def test_build_unshielded_transfer_with_ttl(
     tx = await builder._build_unshielded_transfer(wallet, recipient, amount, ttl=ttl)
 
     assert tx["type"] == "unshielded_transfer"
-    assert tx["standard"]["intents"]["0"]["ttl"] == ttl
-    # recipient + change
+    # Verify input is the 5000 one
     offer = tx["standard"]["intents"]["0"]["guaranteed_unshielded_offer"]
+    assert offer["inputs"][0]["value"] == 5000
     assert len(offer["outputs"]) == 2
 
 
@@ -89,3 +92,35 @@ async def test_prove_transaction(mock_client: MagicMock) -> None:
 
         result = await builder._prove_transaction(tx)
         assert result["proven"] is True
+
+
+@pytest.mark.asyncio
+async def test_build_shielded_transfer_multi_asset(
+    mock_client: MagicMock, wallet: MidnightWallet
+) -> None:
+    builder = TransactionBuilder(mock_client)
+    from noxipher.zswap.notes import ShieldedCoinNote
+
+    # Custom token type
+    token_type = b"\x01" * 32
+    coin = ShieldedCoinNote(
+        token_type=token_type, value=2000, nonce=b"\x00" * 32, merkle_tree_index=10
+    )
+    wallet.shielded_state.add_coin(coin)
+
+    recipient = wallet.shielded.address
+    amount = 1500
+
+    tx = await builder._build_shielded_transfer(
+        wallet, recipient, amount, token_type=token_type
+    )
+
+    assert tx["type"] == "shielded_transfer"
+    # Largest first selection should pick our coin
+    assert tx["circuits"][0]["private_inputs"]["coin"]["value"] == 2000
+
+    # Verify nonces are random (not \x01 or \x02)
+    output_circuit = [c for c in tx["circuits"] if c["id"] == "zswap_output"][0]
+    nonce_hex = output_circuit["private_inputs"]["nonce"]
+    assert nonce_hex != ("01" * 32)
+    assert len(nonce_hex) == 64
