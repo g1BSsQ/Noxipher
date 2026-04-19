@@ -72,8 +72,14 @@ class TransactionBuilder:
         contract_address: str,
         entry_point: str,
         args: dict[str, Any],
+        fee: int | None = None,
     ) -> "TransactionReceipt":
         """Call a contract entry point."""
+        # 1. Build unshielded part for gas fee
+        unshielded_part = await self._build_unshielded_transfer(
+            wallet, wallet.unshielded.address, 0, fee=fee
+        )
+        
         unsigned_tx = {
             "type": "contract_call",
             "contract_address": contract_address,
@@ -81,6 +87,7 @@ class TransactionBuilder:
             "args": args,
             "circuits": [],
             "requires_unshielded_signature": True,
+            "standard": unshielded_part["standard"],
         }
         proven_tx = await self._prove_transaction(unsigned_tx)
         raw_bytes = self._serialize_transaction(proven_tx, wallet)
@@ -92,14 +99,21 @@ class TransactionBuilder:
         wallet: "MidnightWallet",
         bytecode: bytes,
         initial_state: dict[str, Any] | bytes = b"",
+        fee: int | None = None,
     ) -> "TransactionReceipt":
         """Deploy a new smart contract."""
+        # 1. Build unshielded part for deployment fee
+        unshielded_part = await self._build_unshielded_transfer(
+            wallet, wallet.unshielded.address, 0, fee=fee
+        )
+        
         unsigned_tx: dict[str, Any] = {
             "type": "contract_deploy",
             "bytecode": bytecode,
             "initial_state": initial_state,
             "circuits": [],
             "requires_unshielded_signature": True,
+            "standard": unshielded_part["standard"],
         }
         # In Midnight, deployment doesn't usually need ZK proofs for the action itself,
         # but the transaction must still be balanced and signed.
@@ -188,8 +202,9 @@ class TransactionBuilder:
 
         # 4. Create Outputs (UtxoOutput)
         outputs = []
-        # Recipient output
-        outputs.append({"value": amount, "owner": recipient_bytes, "type_": 0})
+        # Recipient output (Bug 2 Fix: Only add if amount > 0 to avoid Dust UTXOs)
+        if amount > 0:
+            outputs.append({"value": amount, "owner": recipient_bytes, "type_": 0})
         # Change output
         if current_total > required:
             outputs.append(
@@ -391,44 +406,62 @@ class TransactionBuilder:
 
         # 0. Handle contract deployment/call special structuring
         if tx_data.get("type") == "contract_deploy":
-            # Structure for StandardTransaction
+            # Bug 1 Fix: Merge action into existing standard envelope (containing fees)
+            if "standard" not in tx_data:
+                 tx_data["standard"] = {
+                    "network_id": self._client.config.name,
+                    "intents": {
+                        "0": {
+                            "guaranteed_unshielded_offer": {
+                                "inputs": [],
+                                "outputs": [],
+                                "signatures": [],
+                            },
+                            "ttl": 1800,
+                            "actions": [],
+                            "binding_commitment": b"\x00" * 32,
+                        }
+                    },
+                    "binding_randomness": secrets.token_bytes(32),
+                }
+
             action = {
                 "type": "deploy",
                 "bytecode": tx_data["bytecode"],
                 "initial_state": serialize_contract_args(tx_data.get("initial_state", b"")),
             }
-            intent = {
-                "guaranteed_unshielded_offer": {"inputs": [], "outputs": [], "signatures": []},
-                "ttl": 1800,
-                "actions": [action],
-                "binding_commitment": b"\x00" * 32,
-            }
-            stx = {
-                "network_id": self._client.config.name,
-                "intents": {"0": intent},
-                "binding_randomness": b"\x00" * 32,
-            }
-            tx_data["standard"] = stx
+            tx_data["standard"]["intents"]["0"]["actions"] = [action]
+            # Bug 3 Fix
+            tx_data["standard"]["binding_randomness"] = secrets.token_bytes(32)
         elif tx_data.get("type") == "contract_call":
-            # Structure for StandardTransaction
+            # Bug 1 Fix: Merge action into existing standard envelope
+            if "standard" not in tx_data:
+                tx_data["standard"] = {
+                    "network_id": self._client.config.name,
+                    "intents": {
+                        "0": {
+                            "guaranteed_unshielded_offer": {
+                                "inputs": [],
+                                "outputs": [],
+                                "signatures": [],
+                            },
+                            "ttl": 1800,
+                            "actions": [],
+                            "binding_commitment": b"\x00" * 32,
+                        }
+                    },
+                    "binding_randomness": secrets.token_bytes(32),
+                }
+
             action = {
                 "type": "call",
                 "address": bytes.fromhex(tx_data["contract_address"]),
                 "entry_point": tx_data["entry_point"],
                 "args": serialize_contract_args(tx_data.get("args", b"")),
             }
-            intent = {
-                "guaranteed_unshielded_offer": {"inputs": [], "outputs": [], "signatures": []},
-                "ttl": 1800,
-                "actions": [action],
-                "binding_commitment": b"\x00" * 32,
-            }
-            stx = {
-                "network_id": self._client.config.name,
-                "intents": {"0": intent},
-                "binding_randomness": b"\x00" * 32,
-            }
-            tx_data["standard"] = stx
+            tx_data["standard"]["intents"]["0"]["actions"] = [action]
+            # Bug 3 Fix
+            tx_data["standard"]["binding_randomness"] = secrets.token_bytes(32)
         elif tx_data.get("type") == "shielded_transfer":
             # Bug 1 Fix: Ensure StandardTransaction exists and integrate proofs
             if "standard" not in tx_data:
@@ -447,7 +480,7 @@ class TransactionBuilder:
                             "binding_commitment": b"\x00" * 32,
                         }
                     },
-                    "binding_randomness": b"\x00" * 32,
+                    "binding_randomness": secrets.token_bytes(32),  # Bug 3 Fix
                 }
             
             # Integrate proofs into shielded_offer of intent 0
