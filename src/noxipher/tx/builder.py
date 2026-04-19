@@ -24,7 +24,7 @@ if TYPE_CHECKING:
 
 
 class TransactionBuilder:
-    \"\"\"Build and submit Midnight transactions. Pure Python.\"\"\"
+    """Build and submit Midnight transactions. Pure Python."""
 
     def __init__(self, client: "NoxipherClient") -> None:
         self._client = client
@@ -38,9 +38,9 @@ class TransactionBuilder:
         token_type: bytes = b"\x00" * 32,
         fee: int | None = None,
     ) -> "TransactionReceipt":
-        \"\"\"
+        """
         Transfer NIGHT or other tokens.
-        \"\"\"
+        """
         if shielded:
             # 1. Build shielded part (Zswap)
             unsigned_tx = await self._build_shielded_transfer(
@@ -75,7 +75,7 @@ class TransactionBuilder:
         args: dict[str, Any],
         fee: int | None = None,
     ) -> "TransactionReceipt":
-        \"\"\"Call a contract entry point.\"\"\"
+        """Call a contract entry point."""
         # 1. Build unshielded part for gas fee
         unshielded_part = await self._build_unshielded_transfer(
             wallet, wallet.unshielded.address, 0, fee=fee
@@ -103,7 +103,7 @@ class TransactionBuilder:
         initial_state: dict[str, Any] | bytes = b"",
         fee: int | None = None,
     ) -> "TransactionReceipt":
-        \"\"\"Deploy a new smart contract.\"\"\"
+        """Deploy a new smart contract."""
         # 1. Build unshielded part for deployment fee
         unshielded_part = await self._build_unshielded_transfer(
             wallet, wallet.unshielded.address, 0, fee=fee
@@ -133,9 +133,9 @@ class TransactionBuilder:
         ttl: int = 1800,
         token_type: bytes = b"\x00" * 32,
     ) -> dict[str, Any]:
-        \"\"\"
+        """
         Build unsigned unshielded transfer with optimized UTXO selection (Largest First).
-        \"\"\"
+        """
         from noxipher.address.bech32m import decode_address
 
         # 1. Decode recipient address to get 32-byte public key/address
@@ -260,7 +260,7 @@ class TransactionBuilder:
         ttl: int = 1800,
         token_type: bytes = b"\x00" * 32,
     ) -> dict[str, Any]:
-        \"\"\"
+        """
         Build unsigned shielded transfer.
 
         Logic:
@@ -268,7 +268,7 @@ class TransactionBuilder:
         2. Extract witnesses (Merkle proofs).
         3. Create Zswap circuits (spend + output).
         4. Structure payload for Proof Server.
-        \"\"\"
+        """
         # 1. Select coins (Largest First)
         coins = wallet.shielded_state.unspent_coins
 
@@ -394,7 +394,7 @@ class TransactionBuilder:
         }
 
     async def _prove_transaction(self, tx: dict[str, Any]) -> dict[str, Any]:
-        \"\"\"Prove all segments via Proof Server HTTP API.\"\"\"
+        """Prove all segments via Proof Server HTTP API."""
         from noxipher.proof.prover import ZKProver
 
         prover = ZKProver(self._client.proof)
@@ -402,7 +402,7 @@ class TransactionBuilder:
         return proven.model_dump()
 
     def _serialize_transaction(self, tx_data: dict[str, Any], wallet: "MidnightWallet") -> bytes:
-        \"\"\"Serialize transaction to raw bytes with signing.\"\"\"
+        """Serialize transaction to raw bytes with signing."""
         from noxipher.crypto.jubjub import compute_binding_commitment
         from noxipher.tx.scale import (
             MidnightTransactionSerializer,
@@ -522,7 +522,7 @@ class TransactionBuilder:
         return serializer.serialize_raw_midnight_tx(midnight_tx_bytes)
 
     async def _wait_for_receipt(self, tx_hash: str, timeout: int = 120) -> "TransactionReceipt":
-        \"\"\"Poll Indexer until tx is finalized.\"\"\"
+        """Poll Indexer until tx is finalized."""
         deadline = asyncio.get_event_loop().time() + timeout
         while asyncio.get_event_loop().time() < deadline:
             try:

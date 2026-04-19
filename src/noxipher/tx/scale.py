@@ -1,8 +1,8 @@
-\"\"\"
+"""
 SCALE serialization for Midnight transaction structures.
 
 Complies with Midnight Protocol v8.1.0-rc.1.
-\"\"\"
+"""
 
 from __future__ import annotations
 
@@ -13,9 +13,9 @@ from typing import Any, BinaryIO
 
 
 def tagged_serialize(tag: str, payload: bytes) -> bytes:
-    \"\"\"
+    """
     Serialize in Tagged<T> format: [tag_len, tag_bytes, payload].
-    \"\"\"
+    """
     tag_bytes = tag.encode()
     return encode_scale_int(len(tag_bytes)) + tag_bytes + payload
 
@@ -24,9 +24,9 @@ def tagged_serialize(tag: str, payload: bytes) -> bytes:
 
 
 def encode_scale_int(val: int) -> bytes:
-    \"\"\"
+    """
     Encode integer in SCALE compact format.
-    \"\"\"
+    """
     if val < 64:
         return bytes([val << 2])
     elif val < 16384:
@@ -51,7 +51,7 @@ def serialize_u128(val: int) -> bytes:
 
 
 def serialize_bytes(data: bytes) -> bytes:
-    \"\"\"Serialize bytes with compact length prefix.\"\"\"
+    """Serialize bytes with compact length prefix."""
     return encode_scale_int(len(data)) + data
 
 
@@ -59,9 +59,9 @@ def serialize_bytes(data: bytes) -> bytes:
 
 
 def serialize_utxo_spend(spend: dict[str, Any]) -> bytes:
-    \"\"\"
+    """
     Serialize UtxoSpend struct.
-    \"\"\"
+    """
     payload = bytearray()
     payload += serialize_u128(spend["value"])
     payload += spend["owner"]  # 32 bytes
@@ -72,9 +72,9 @@ def serialize_utxo_spend(spend: dict[str, Any]) -> bytes:
 
 
 def serialize_utxo_output(output: dict[str, Any]) -> bytes:
-    \"\"\"
+    """
     Serialize UtxoOutput struct.
-    \"\"\"
+    """
     payload = bytearray()
     payload += serialize_u128(output["value"])
     payload += output["owner"]  # 32 bytes
@@ -83,9 +83,9 @@ def serialize_utxo_output(output: dict[str, Any]) -> bytes:
 
 
 def serialize_unshielded_offer(offer: dict[str, Any]) -> bytes:
-    \"\"\"
+    """
     Serialize UnshieldedOffer struct.
-    \"\"\"
+    """
     payload = bytearray()
     # Vec<UtxoSpend>
     payload += encode_scale_int(len(offer["inputs"]))
@@ -106,10 +106,10 @@ def serialize_unshielded_offer(offer: dict[str, Any]) -> bytes:
 
 
 def serialize_contract_action(action: dict[str, Any]) -> bytes:
-    \"\"\"
+    """
     Serialize ContractAction enum.
     0: Deploy, 1: Call
-    \"\"\"
+    """
     payload = bytearray()
     if action["type"] == "deploy":
         payload.append(0)  # Discriminant
@@ -137,9 +137,9 @@ def serialize_contract_action(action: dict[str, Any]) -> bytes:
 
 
 def serialize_intent(intent: dict[str, Any]) -> bytes:
-    \"\"\"
+    """
     Serialize Intent struct.
-    \"\"\"
+    """
     payload = bytearray()
 
     # guaranteed_unshielded_offer: Option<UnshieldedOffer>
@@ -174,9 +174,9 @@ def serialize_intent(intent: dict[str, Any]) -> bytes:
 
 
 def serialize_zswap_offer(offer: dict[str, Any]) -> bytes:
-    \"\"\"
+    """
     Serialize ZswapOffer struct.
-    \"\"\"
+    """
     payload = bytearray()
 
     # spend_proofs: Vec<ZswapSpendProof> (ZK Proofs are 192 bytes or similar)
@@ -204,10 +204,10 @@ def serialize_zswap_offer(offer: dict[str, Any]) -> bytes:
 
 
 def serialize_contract_args(args: object) -> bytes:
-    \"\"\"
+    """
     Serialize contract arguments using Midnight's Compact-compatible format.
     Handles basic types and nested structures.
-    \"\"\"
+    """
     if args is None:
         return b""
     if isinstance(args, bytes):
@@ -234,9 +234,9 @@ def serialize_contract_args(args: object) -> bytes:
 
 
 def serialize_standard_transaction(stx: dict[str, Any]) -> bytes:
-    \"\"\"
+    """
     Serialize StandardTransaction struct.
-    \"\"\"
+    """
     payload = bytearray()
 
     # network_id: String
@@ -267,18 +267,18 @@ def serialize_standard_transaction(stx: dict[str, Any]) -> bytes:
 
 
 def serialize_transaction(tx_data: dict[str, Any]) -> bytes:
-    \"\"\"
+    """
     Main entry point for transaction serialization.
     Currently only supports StandardTransaction wrapper.
-    \"\"\"
+    """
     return serialize_standard_transaction(tx_data["standard"])
 
 
 def get_unshielded_signing_payload(segment_id: int, intent: dict[str, Any]) -> bytes:
-    \"\"\"
+    """
     Payload to sign for UnshieldedOffer.
     Construction: b"midnight:unshielded-sig[v1]" || segment_id (u32) || intent_bytes
-    \"\"\"
+    """
     payload = bytearray(b"midnight:unshielded-sig[v1]")
     payload += serialize_u32(segment_id)
     payload += serialize_intent(intent)
@@ -286,13 +286,13 @@ def get_unshielded_signing_payload(segment_id: int, intent: dict[str, Any]) -> b
 
 
 class MidnightTransactionSerializer:
-    \"\"\"Wraps Midnight bytes into Substrate extrinsic payload.\"\"\"
+    """Wraps Midnight bytes into Substrate extrinsic payload."""
 
     def serialize_raw_midnight_tx(self, midnight_bytes: bytes) -> bytes:
-        \"\"\"
+        """
         Wraps standard-tx[v1] bytes into pallet Call.
         Pallet 5, Call 0 (submit_transaction)
-        \"\"\"
+        """
         # [pallet_idx, call_idx, midnight_bytes_with_len]
         payload = bytearray([5, 0])
         payload += encode_scale_int(len(midnight_bytes))
