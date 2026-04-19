@@ -53,7 +53,7 @@ class TransactionBuilder:
             # 3. Combine
             unsigned_tx["standard"] = unshielded_part["standard"]
             unsigned_tx["requires_unshielded_signature"] = True
-            
+
             # 4. Prove
             proven_tx = await self._prove_transaction(unsigned_tx)
         else:
@@ -79,7 +79,7 @@ class TransactionBuilder:
         unshielded_part = await self._build_unshielded_transfer(
             wallet, wallet.unshielded.address, 0, fee=fee
         )
-        
+
         unsigned_tx = {
             "type": "contract_call",
             "contract_address": contract_address,
@@ -106,7 +106,7 @@ class TransactionBuilder:
         unshielded_part = await self._build_unshielded_transfer(
             wallet, wallet.unshielded.address, 0, fee=fee
         )
-        
+
         unsigned_tx: dict[str, Any] = {
             "type": "contract_deploy",
             "bytecode": bytecode,
@@ -166,7 +166,7 @@ class TransactionBuilder:
                 selected = [utxo]
                 current_total = required
                 break
-        
+
         # Step B: Fallback to Largest First (Greedy)
         if not selected:
             # Sort descending by value to minimize inputs
@@ -177,7 +177,7 @@ class TransactionBuilder:
                 current_total += int(utxo.get("value", 0))
                 if current_total >= required:
                     break
-        
+
         if current_total < required:
             raise TransactionError(
                 f"Insufficient unshielded balance for amount+fee: {current_total} < {required}"
@@ -279,9 +279,7 @@ class TransactionBuilder:
                 break
 
         if total_selected < amount:
-            raise TransactionError(
-                f"Insufficient shielded balance: {total_selected} < {amount}"
-            )
+            raise TransactionError(f"Insufficient shielded balance: {total_selected} < {amount}")
 
         # 2. Extract witnesses and create circuits
         # In Midnight, each spend and each output is a separate circuit.
@@ -397,6 +395,7 @@ class TransactionBuilder:
 
     def _serialize_transaction(self, tx_data: dict[str, Any], wallet: "MidnightWallet") -> bytes:
         """Serialize transaction to raw bytes with signing."""
+        from noxipher.crypto.jubjub import compute_binding_commitment
         from noxipher.tx.scale import (
             MidnightTransactionSerializer,
             get_unshielded_signing_payload,
@@ -408,7 +407,7 @@ class TransactionBuilder:
         if tx_data.get("type") == "contract_deploy":
             # Bug 1 Fix: Merge action into existing standard envelope (containing fees)
             if "standard" not in tx_data:
-                 tx_data["standard"] = {
+                tx_data["standard"] = {
                     "network_id": self._client.config.name,
                     "intents": {
                         "0": {
@@ -431,8 +430,12 @@ class TransactionBuilder:
                 "initial_state": serialize_contract_args(tx_data.get("initial_state", b"")),
             }
             tx_data["standard"]["intents"]["0"]["actions"] = [action]
-            # Bug 3 Fix
-            tx_data["standard"]["binding_randomness"] = secrets.token_bytes(32)
+            # Bug 3 Fix: Real randomness and commitment
+            rnd = secrets.token_bytes(32)
+            tx_data["standard"]["binding_randomness"] = rnd
+            tx_data["standard"]["intents"]["0"]["binding_commitment"] = compute_binding_commitment(
+                rnd
+            )
         elif tx_data.get("type") == "contract_call":
             # Bug 1 Fix: Merge action into existing standard envelope
             if "standard" not in tx_data:
@@ -461,7 +464,11 @@ class TransactionBuilder:
             }
             tx_data["standard"]["intents"]["0"]["actions"] = [action]
             # Bug 3 Fix
-            tx_data["standard"]["binding_randomness"] = secrets.token_bytes(32)
+            rnd = secrets.token_bytes(32)
+            tx_data["standard"]["binding_randomness"] = rnd
+            tx_data["standard"]["intents"]["0"]["binding_commitment"] = compute_binding_commitment(
+                rnd
+            )
         elif tx_data.get("type") == "shielded_transfer":
             # Bug 1 Fix: Ensure StandardTransaction exists and integrate proofs
             if "standard" not in tx_data:
@@ -482,17 +489,27 @@ class TransactionBuilder:
                     },
                     "binding_randomness": secrets.token_bytes(32),  # Bug 3 Fix
                 }
-            
+
             # Integrate proofs into shielded_offer of intent 0
             offer = {
-                "spend_proofs": [bytes.fromhex(p) if isinstance(p, str) else p 
-                                for p in tx_data.get("proof_hexes", {}).get("spends", [])],
-                "output_proofs": [bytes.fromhex(p) if isinstance(p, str) else p 
-                                 for p in tx_data.get("proof_hexes", {}).get("outputs", [])],
-                "zswap_memos": [], 
+                "spend_proofs": [
+                    bytes.fromhex(p) if isinstance(p, str) else p
+                    for p in tx_data.get("proof_hexes", {}).get("spends", [])
+                ],
+                "output_proofs": [
+                    bytes.fromhex(p) if isinstance(p, str) else p
+                    for p in tx_data.get("proof_hexes", {}).get("outputs", [])
+                ],
+                "zswap_memos": [],
                 "merkle_root": tx_data.get("merkle_root", b"\x00" * 32),
             }
             tx_data["standard"]["intents"]["0"]["shielded_offer"] = offer
+
+            # Bug 3 Fix: Ensure commitment matches randomness
+            rnd = tx_data["standard"]["binding_randomness"]
+            tx_data["standard"]["intents"]["0"]["binding_commitment"] = compute_binding_commitment(
+                rnd
+            )
         elif tx_data.get("type") == "unshielded_transfer" and "standard" not in tx_data:
             # Should not happen with new orchestration
             pass

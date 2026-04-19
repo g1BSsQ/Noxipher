@@ -39,13 +39,13 @@ class ContractService:
         # For now, we assume bytecode is passed as a string/bytes in initial_state or similar
         # Real compact contracts have a .wasm circuit that acts as bytecode
         bytecode = contract.get_circuit_path(contract.name).read_bytes()
-        
+
         receipt = await self._client.tx.deploy_contract(
             wallet=wallet,
             bytecode=bytecode,
             initial_state=initial_state or {},
         )
-        
+
         # Address is usually derived or returned in receipt
         # For mock/demo, we use the tx hash as part of the address
         address = f"0x{receipt.hash[:64]}"

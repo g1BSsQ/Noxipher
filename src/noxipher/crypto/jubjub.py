@@ -176,3 +176,17 @@ def coin_commitment(
     writer.update(recipient_hash)
 
     return writer.finalize()
+
+
+def compute_binding_commitment(randomness: bytes) -> bytes:
+    """
+    Compute Pedersen binding commitment for a balanced transaction.
+    For a balanced intent (sum in = sum out), Commitment = g^randomness.
+    """
+    # randomness as Fr scalar
+    r_scalar = EmbeddedFr.from_le_bytes(randomness)
+
+    # g^randomness using JubJub generator
+    gen = JubJubPoint.generator()
+    commitment_point = gen * r_scalar
+    return commitment_point.to_bytes()
