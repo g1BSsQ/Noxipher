@@ -1,6 +1,14 @@
 # Contributing to Noxipher
 
-Thank you for your interest in contributing to Noxipher! We welcome contributions of all forms: bug reports, feature requests, documentation improvements, and pull requests.
+> [!IMPORTANT]
+> ### 🛑 MANDATORY PRE-PUSH CHECKLIST
+> Before pushing ANY code or submitting a Pull Request, you **MUST** run the following commands locally and ensure they all pass with **ZERO** errors. Failure to do so will result in automated rejection.
+>
+> 1. **Linting & Formatting**: `ruff check src/ tests/ --fix`
+> 2. **Type Checking**: `mypy src/`
+> 3. **Unit Tests**: `pytest`
+>
+> **Do NOT push if any of the above fails.**
 
 ## Getting Started
 
