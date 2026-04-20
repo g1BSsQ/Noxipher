@@ -21,9 +21,9 @@ from noxipher.crypto.commitment import RawTokenType
 if TYPE_CHECKING:
     from noxipher.core.client import NoxipherClient
     from noxipher.tx.models import TransactionReceipt
-    from noxipher.wallet.wallet import MidnightWallet
-    from noxipher.wallet.unshielded import UnshieldedWallet
     from noxipher.wallet.dust import DustWallet
+    from noxipher.wallet.unshielded import UnshieldedWallet
+    from noxipher.wallet.wallet import MidnightWallet
 
 
 class TransactionBuilder:
