@@ -26,6 +26,9 @@ if TYPE_CHECKING:
 class TransactionBuilder:
     """Build and submit Midnight transactions. Pure Python."""
 
+    # Minimum UTXO value to avoid spam (1,000 Specks)
+    DUST_THRESHOLD = 1_000
+
     def __init__(self, client: "NoxipherClient") -> None:
         self._client = client
 
@@ -37,6 +40,7 @@ class TransactionBuilder:
         shielded: bool = False,
         token_type: bytes = b"\x00" * 32,
         fee: int | None = None,
+        ttl: int = 1800,
     ) -> "TransactionReceipt":
         """
         Transfer NIGHT or other tokens.
@@ -48,7 +52,7 @@ class TransactionBuilder:
             )
             # 2. Build unshielded part for fee (Midnight StandardTransaction requires fee)
             unshielded_part = await self._build_unshielded_transfer(
-                wallet, wallet.unshielded.address, 0, fee=fee
+                wallet, wallet.unshielded.address, 0, fee=fee, ttl=ttl, use_dust=True
             )
             # 3. Combine
             unsigned_tx["standard"] = unshielded_part["standard"]
@@ -60,7 +64,7 @@ class TransactionBuilder:
         else:
             # Unshielded transfers are direct and don't require the Proof Server
             proven_tx = await self._build_unshielded_transfer(
-                wallet, to, amount, token_type=token_type, fee=fee
+                wallet, to, amount, token_type=token_type, fee=fee, ttl=ttl
             )
 
         raw_bytes = self._serialize_transaction(proven_tx, wallet)
@@ -74,11 +78,12 @@ class TransactionBuilder:
         entry_point: str,
         args: dict[str, Any],
         fee: int | None = None,
+        ttl: int = 1800,
     ) -> "TransactionReceipt":
         """Call a contract entry point."""
         # 1. Build unshielded part for gas fee
         unshielded_part = await self._build_unshielded_transfer(
-            wallet, wallet.unshielded.address, 0, fee=fee
+            wallet, wallet.unshielded.address, 0, fee=fee, ttl=ttl, use_dust=True
         )
 
         unsigned_tx = {
@@ -102,11 +107,12 @@ class TransactionBuilder:
         bytecode: bytes,
         initial_state: dict[str, Any] | bytes = b"",
         fee: int | None = None,
+        ttl: int = 1800,
     ) -> "TransactionReceipt":
         """Deploy a new smart contract."""
         # 1. Build unshielded part for deployment fee
         unshielded_part = await self._build_unshielded_transfer(
-            wallet, wallet.unshielded.address, 0, fee=fee
+            wallet, wallet.unshielded.address, 0, fee=fee, ttl=ttl, use_dust=True
         )
 
         unsigned_tx: dict[str, Any] = {
@@ -132,6 +138,7 @@ class TransactionBuilder:
         fee: int | None = None,
         ttl: int = 1800,
         token_type: bytes = b"\x00" * 32,
+        use_dust: bool = False,
     ) -> dict[str, Any]:
         """
         Build unsigned unshielded transfer with optimized UTXO selection (Largest First).
@@ -145,7 +152,12 @@ class TransactionBuilder:
             raise TransactionError(f"Invalid recipient address: {e}") from e
 
         # 2. Fetch UTXOs
-        utxos = await wallet.unshielded.get_utxos(self._client.indexer)
+        if use_dust:
+            utxos = await wallet.dust.get_utxos(self._client.indexer)
+            owner_pk = wallet.dust.public_key
+        else:
+            utxos = await wallet.unshielded.get_utxos(self._client.indexer)
+            owner_pk = wallet.unshielded.public_key
 
         # 3. Optimized Selection: Filter by token type and sort by value (Largest First)
         eligible = []
@@ -196,7 +208,7 @@ class TransactionBuilder:
             inputs.append(
                 {
                     "value": int(utxo["value"]),
-                    "owner": wallet.unshielded.public_key,
+                    "owner": owner_pk,
                     "type_": 0,
                     "intent_hash": bytes.fromhex(i_hash),
                     "output_no": int(o_no),
@@ -208,15 +220,20 @@ class TransactionBuilder:
         # Recipient output (Bug 2 Fix: Only add if amount > 0 to avoid Dust UTXOs)
         if amount > 0:
             outputs.append({"value": amount, "owner": recipient_bytes, "type_": 0})
-        # Change output
+        # Change output (with Dust Protection)
         if current_total > required:
-            outputs.append(
-                {
-                    "value": current_total - required,
-                    "owner": wallet.unshielded.public_key,
-                    "type_": 0,
-                }
-            )
+            change = current_total - required
+            if change < self.DUST_THRESHOLD:
+                # Add tiny change to fee instead of creating a new UTXO
+                real_fee += change
+            else:
+                outputs.append(
+                    {
+                        "value": change,
+                        "owner": owner_pk,
+                        "type_": 0,
+                    }
+                )
 
         # 5. Structure for SCALE serialization
         # This dict[str, Any] matches the expected input of serialize_transaction in scale.py
@@ -423,7 +440,7 @@ class TransactionBuilder:
                                 "outputs": [],
                                 "signatures": [],
                             },
-                            "ttl": 1800,
+                            "ttl": tx_data.get("ttl", 1800),
                             "actions": [],
                             "binding_commitment": b"\x00" * 32,
                         }
@@ -457,7 +474,7 @@ class TransactionBuilder:
                                 "outputs": [],
                                 "signatures": [],
                             },
-                            "ttl": 1800,
+                            "ttl": tx_data.get("ttl", 1800),
                             "actions": [],
                             "binding_commitment": b"\x00" * 32,
                         }
@@ -522,8 +539,9 @@ class TransactionBuilder:
         return serializer.serialize_raw_midnight_tx(midnight_tx_bytes)
 
     async def _wait_for_receipt(self, tx_hash: str, timeout: int = 120) -> "TransactionReceipt":
-        """Poll Indexer until tx is finalized."""
+        """Poll Indexer until tx is finalized with exponential backoff."""
         deadline = asyncio.get_event_loop().time() + timeout
+        retry_count = 0
         while asyncio.get_event_loop().time() < deadline:
             try:
                 txs = await self._client.indexer.get_transactions(hash=tx_hash)
@@ -551,5 +569,9 @@ class TransactionBuilder:
 
             except Exception:
                 pass
-            await asyncio.sleep(2)
+            
+            # Exponential backoff: 2s, 4s, 8s, 16s... up to 10s
+            delay = min(10, 2 * (retry_count + 1))
+            await asyncio.sleep(delay)
+            retry_count += 1
         raise TransactionTimeoutError(f"Timeout waiting for tx {tx_hash}")

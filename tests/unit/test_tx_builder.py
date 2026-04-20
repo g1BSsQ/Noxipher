@@ -134,3 +134,31 @@ async def test_build_shielded_transfer_multi_asset(
     nonce_hex = output_circuit["private_inputs"]["nonce"]
     assert nonce_hex != ("01" * 32)
     assert len(nonce_hex) == 64
+
+
+@pytest.mark.asyncio
+async def test_build_unshielded_transfer_dust_protection(
+    mock_client: MagicMock, wallet: MidnightWallet
+) -> None:
+    builder = TransactionBuilder(mock_client)
+    mock_client.config.min_fee = 100
+    
+    # Mock UTXOs for DUST
+    wallet.dust.get_utxos = AsyncMock(
+        return_value=[
+            {"value": 150, "intentHash": "cc" * 32, "outputNo": 0},
+        ]
+    )
+    
+    # Required = amount(0) + fee(100) = 100
+    # Selected = 150
+    # Change = 50. Since 50 < DUST_THRESHOLD (1000), it should be added to fee.
+    
+    recipient = wallet.unshielded.address
+    tx = await builder._build_unshielded_transfer(
+        wallet, recipient, 0, fee=100, use_dust=True
+    )
+    
+    offer = tx["standard"]["intents"]["0"]["guaranteed_unshielded_offer"]
+    assert len(offer["outputs"]) == 0  # No change output because of dust protection
+    assert tx["fee"] == 150  # 100 original fee + 50 tiny change

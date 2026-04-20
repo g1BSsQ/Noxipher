@@ -85,6 +85,12 @@ class DustWallet:
             raise WalletError(f"No DUST status for stake key: {cardano_stake_key}")
         return results[0]
 
+    async def get_utxos(self, indexer: IndexerClient) -> list[dict[str, Any]]:
+        """
+        Get DUST UTxO set from Indexer.
+        """
+        return await indexer.get_utxos(address=self.address)
+
     async def register_night_utxos(
         self,
         utxos: list[dict[str, Any]],
