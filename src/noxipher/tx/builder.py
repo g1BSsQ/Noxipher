@@ -22,6 +22,8 @@ if TYPE_CHECKING:
     from noxipher.core.client import NoxipherClient
     from noxipher.tx.models import TransactionReceipt
     from noxipher.wallet.wallet import MidnightWallet
+    from noxipher.wallet.unshielded import UnshieldedWallet
+    from noxipher.wallet.dust import DustWallet
 
 
 class TransactionBuilder:
@@ -529,6 +531,7 @@ class TransactionBuilder:
                 offer = intent.get("guaranteed_unshielded_offer")
                 if offer:
                     # Automatic Signer Detection: Route based on input owner
+                    signer: UnshieldedWallet | DustWallet
                     input_owner = offer["inputs"][0]["owner"] if offer["inputs"] else b""
                     if input_owner == wallet.dust.public_key:
                         signer = wallet.dust
