@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, Any, Never
 
 from noxipher.core.config import Network
 from noxipher.core.exceptions import WalletError
-from noxipher.crypto.jubjub import DustSecretKey
+from noxipher.crypto.keys import Sr25519Signer
 
 if TYPE_CHECKING:
     from noxipher.indexer.client import IndexerClient
@@ -41,7 +41,7 @@ class DustWallet:
     FEE_BLOCKS_MARGIN = 5
 
     def __init__(self, dust_seed: bytes, network: Network) -> None:
-        self._key = DustSecretKey.from_seed(dust_seed)
+        self._signer = Sr25519Signer(dust_seed)
         self._network = network
 
     @property
@@ -55,14 +55,14 @@ class DustWallet:
         from noxipher.address.bech32m import encode_address
 
         # SCALE encoding: 0x73 + little-endian pubkey
-        # DustSecretKey.public_key returns little-endian bytes.
-        scale_payload = b"\x73" + self._key.public_key
+        # Sr25519 public key (32 bytes).
+        scale_payload = b"\x73" + self._signer.public_key
         return encode_address(scale_payload, "dust", self._network)
 
     @property
     def public_key(self) -> bytes:
-        """32-byte DUST public key."""
-        return self._key.public_key
+        """32-byte DUST public key (sr25519)."""
+        return self._signer.public_key
 
     def can_transfer(self) -> bool:
         """DUST cannot be transferred. Always returns False."""
@@ -90,6 +90,13 @@ class DustWallet:
         Get DUST UTxO set from Indexer.
         """
         return await indexer.get_utxos(address=self.address)
+
+    def sign_seg_intent(self, data_to_sign: bytes) -> bytes:
+        """
+        Signs the serialized SegIntent data for an unshielded offer.
+        Uses sr25519 for protocol compatibility with unshielded segments.
+        """
+        return self._signer.sign(data_to_sign)
 
     async def register_night_utxos(
         self,

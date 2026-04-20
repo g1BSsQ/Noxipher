@@ -34,3 +34,4 @@ class RawTokenType:
     # DUST token — prefix 01 00 01 (verify from ledger-v8)
     # TypeScript: unshieldedToken().raw = "0000...00"
     # Preprod example from NPM docs: "010001000000..."
+    DUST: bytes = bytes.fromhex("010001" + "00" * 29)

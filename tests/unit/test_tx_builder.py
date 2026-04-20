@@ -143,10 +143,16 @@ async def test_build_unshielded_transfer_dust_protection(
     builder = TransactionBuilder(mock_client)
     mock_client.config.min_fee = 100
     
-    # Mock UTXOs for DUST
+    # Mock UTXOs for DUST (must include DUST token type)
+    from noxipher.crypto.commitment import RawTokenType
     wallet.dust.get_utxos = AsyncMock(
         return_value=[
-            {"value": 150, "intentHash": "cc" * 32, "outputNo": 0},
+            {
+                "value": 150, 
+                "intentHash": "cc" * 32, 
+                "outputNo": 0,
+                "token_type": RawTokenType.DUST.hex()
+            },
         ]
     )
     
@@ -162,3 +168,85 @@ async def test_build_unshielded_transfer_dust_protection(
     offer = tx["standard"]["intents"]["0"]["guaranteed_unshielded_offer"]
     assert len(offer["outputs"]) == 0  # No change output because of dust protection
     assert tx["fee"] == 150  # 100 original fee + 50 tiny change
+
+
+@pytest.mark.asyncio
+async def test_serialize_transaction_signer_routing(
+    mock_client: MagicMock, wallet: MidnightWallet
+) -> None:
+    """Verify that _serialize_transaction routes signatures correctly (NIGHT vs DUST)."""
+    builder = TransactionBuilder(mock_client)
+    
+    # 1. Mock DUST UTXO
+    from noxipher.crypto.commitment import RawTokenType
+    wallet.dust.get_utxos = AsyncMock(
+        return_value=[
+            {
+                "value": 5000,
+                "intentHash": "aa" * 32,
+                "outputNo": 0,
+                "token_type": RawTokenType.DUST.hex()
+            }
+        ]
+    )
+    
+    # 2. Build DUST-fee transaction
+    tx_data = await builder._build_unshielded_transfer(
+        wallet, wallet.unshielded.address, 1000, fee=500, use_dust=True
+    )
+    
+    # 3. Mock signers
+    wallet.dust.sign_seg_intent = MagicMock(return_value=b"dust_sig")
+    wallet.unshielded.sign_seg_intent = MagicMock(return_value=b"night_sig")
+    
+    # 4. Serialize
+    builder._serialize_transaction(tx_data, wallet)
+    
+    # 5. Verify routing
+    offer = tx_data["standard"]["intents"]["0"]["guaranteed_unshielded_offer"]
+    assert offer["signatures"] == [b"dust_sig"]
+    wallet.dust.sign_seg_intent.assert_called_once()
+    wallet.unshielded.sign_seg_intent.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_serialize_transaction_binding_protection(
+    mock_client: MagicMock, wallet: MidnightWallet
+) -> None:
+    """Verify that _serialize_transaction does not overwrite pre-set binding randomness."""
+    builder = TransactionBuilder(mock_client)
+    
+    # 1. Create tx_data with pre-set randomness
+    fixed_rnd = b"fixed_randomness" + b"\x00" * 16
+    tx_data = {
+        "requires_unshielded_signature": True,
+        "standard": {
+            "network_id": "preprod",
+            "binding_randomness": fixed_rnd,
+            "intents": {
+                "0": {
+                    "guaranteed_unshielded_offer": {
+                        "inputs": [{
+                            "owner": wallet.unshielded.public_key,
+                            "value": 1000,
+                            "type_": 0,
+                            "intent_hash": b"\x00" * 32,
+                            "output_no": 0
+                        }],
+                        "outputs": [],
+                        "signatures": []
+                    },
+                    "ttl": 1800,
+                    "actions": [],
+                    "binding_commitment": b"initial_commitment"
+                }
+            }
+        }
+    }
+    
+    # 2. Serialize
+    builder._serialize_transaction(tx_data, wallet)
+    
+    # 3. Verify it was NOT overwritten
+    assert tx_data["standard"]["binding_randomness"] == fixed_rnd
+    assert tx_data["standard"]["intents"]["0"]["binding_commitment"] == b"initial_commitment"

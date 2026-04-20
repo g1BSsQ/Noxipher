@@ -16,6 +16,7 @@ import secrets
 from typing import TYPE_CHECKING, Any
 
 from noxipher.core.exceptions import TransactionError, TransactionTimeoutError
+from noxipher.crypto.commitment import RawTokenType
 
 if TYPE_CHECKING:
     from noxipher.core.client import NoxipherClient
@@ -145,6 +146,10 @@ class TransactionBuilder:
         """
         from noxipher.address.bech32m import decode_address
 
+        # 1. Force DUST token type if requested
+        if use_dust:
+            token_type = RawTokenType.DUST
+
         # 1. Decode recipient address to get 32-byte public key/address
         try:
             _, _, recipient_bytes = decode_address(to_address)
@@ -166,7 +171,9 @@ class TransactionBuilder:
             if isinstance(u_token, dict):
                 u_token = u_token.get("hex", "00" * 32)
 
-            if u_token == token_type.hex():
+            # Normalize hex comparison (handle 0x prefix and casing)
+            u_token_hex = u_token.replace("0x", "").lower()
+            if u_token_hex == token_type.hex().lower():
                 eligible.append(utxo)
 
         # 4. Optimized Selection
@@ -503,13 +510,15 @@ class TransactionBuilder:
         # 1. Finalize Cryptographic Binding (Unified Pedersen Commitment G^r * H^v)
         if "standard" in tx_data:
             stx = tx_data["standard"]
-            rnd = secrets.token_bytes(32)
-            fee = tx_data.get("fee", 0)
-            
-            stx["binding_randomness"] = rnd
-            if "0" in stx["intents"]:
-                commitment = compute_binding_commitment(rnd, value=fee)
-                stx["intents"]["0"]["binding_commitment"] = commitment
+            # Only generate new randomness if not already set (preserve ZK proof validity)
+            if stx.get("binding_randomness", b"\x00" * 32) == b"\x00" * 32:
+                rnd = secrets.token_bytes(32)
+                fee = tx_data.get("fee", 0)
+                
+                stx["binding_randomness"] = rnd
+                if "0" in stx["intents"]:
+                    commitment = compute_binding_commitment(rnd, value=fee)
+                    stx["intents"]["0"]["binding_commitment"] = commitment
 
         # 1. Handle unshielded signing if needed
         if tx_data.get("requires_unshielded_signature"):
@@ -519,16 +528,25 @@ class TransactionBuilder:
                 # Sign guaranteed offer
                 offer = intent.get("guaranteed_unshielded_offer")
                 if offer:
+                    # Automatic Signer Detection: Route based on input owner
+                    input_owner = offer["inputs"][0]["owner"] if offer["inputs"] else b""
+                    if input_owner == wallet.dust.public_key:
+                        signer = wallet.dust
+                    else:
+                        signer = wallet.unshielded
+
                     # Create signature
                     payload = get_unshielded_signing_payload(seg_id, intent)
-                    sig = wallet.unshielded.sign_seg_intent(payload)
+                    sig = signer.sign_seg_intent(payload)
                     offer["signatures"] = [sig]
 
                 # Sign fallible offer if exists
                 f_offer = intent.get("fallible_unshielded_offer")
                 if f_offer:
+                    # Reuse the same signer logic if needed, but usually fallible 
+                    # offers in the same intent share the owner.
                     payload = get_unshielded_signing_payload(seg_id, intent)
-                    sig = wallet.unshielded.sign_seg_intent(payload)
+                    sig = signer.sign_seg_intent(payload)
                     f_offer["signatures"] = [sig]
 
         # 2. Serialize to Midnight Transaction format (tagged)
